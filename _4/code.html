@@ -402,7 +402,7 @@
                                 </button>
                             </div>
 
-                            <!-- Right Column: 24h 15m Timetable Grid (7/12 width) -->
+                            <!-- Right Column: 24h 10m Timetable Grid (7/12 width) -->
                             <div class="col-span-7 flex flex-col bg-surface-container-lowest dark:bg-surface-container rounded-2xl p-2 border border-surface-variant/30 min-h-0 bubbly-shadow">
                                 <div class="flex items-center justify-between gap-0.5 mb-2 pb-1.5 border-b border-surface-variant/20">
                                     <div class="flex items-center gap-1">
@@ -1687,11 +1687,11 @@
                 row.appendChild(label);
 
                 const grid = document.createElement('div');
-                grid.className = 'flex-1 h-full grid grid-cols-4 gap-px bg-neutral-200 dark:bg-neutral-700 rounded overflow-hidden relative';
+                grid.className = 'flex-1 h-full grid grid-cols-6 gap-px bg-neutral-200 dark:bg-neutral-700 rounded overflow-hidden relative';
                 
-                for (let part = 0; part < 4; part++) {
+                for (let part = 0; part < 6; part++) {
                     const col = document.createElement('div');
-                    const minutesStr = String(part * 15).padStart(2, '0');
+                    const minutesStr = String(part * 10).padStart(2, '0');
                     const fullTimeStr = `${String(hour).padStart(2, '0')}:${minutesStr}`;
                     
                     col.className = 'bg-white dark:bg-neutral-900 hover:bg-primary-container/20 transition-colors cursor-pointer border-r border-neutral-100 dark:border-neutral-800/30 last:border-0 timetable-grid-cell';
@@ -2251,7 +2251,7 @@
                 const activeMascot = settings.activeMascot || 'woolini';
                 const answers = {
                     'woolini': '멋진 질문이에요! 계획을 단계별로 쪼개어 실천하면, 수학 복습도 훨씬 쉬워질 거예요! 🐉',
-                    'yang-i': '학습 집중도가 상승하고 있어요. 15분 단위로 리프레시하며 오답노트를 적극 작성해봐요! 🐑',
+                    'yang-i': '학습 집중도가 상승하고 있어요. 10분 단위로 리프레시하며 오답노트를 적극 작성해봐요! 🐑',
                     'gom-i': '차근차근 실력을 쌓아가는 모습이 듬직합니다. 오늘 공부 시간 목표도 곰곰이 지켜볼게요. 🐻',
                     'custom': '정말 현명한 생각입니다. 지속 가능한 실천을 위해 1분 단위 상세 계획을 지켜봐요! ✨'
                 };
