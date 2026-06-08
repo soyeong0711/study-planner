@@ -158,7 +158,7 @@
         html.dark #timetable-grid {
             background-color: rgba(255, 255, 255, 0.08) !important;
         }
-        html.dark .timetable-grid-cell {
+        html.dark .timetable-grid-cell:not(.timetable-cell-active) {
             background-color: #07090a !important;
             border-right-color: rgba(255, 255, 255, 0.04) !important;
         }
@@ -1025,6 +1025,29 @@
             return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         }
 
+        function parseDurationMinutes(duration) {
+            if (!duration) return 0;
+            if (typeof duration === 'number') return duration;
+            
+            const durationStr = String(duration);
+            if (/^\d+$/.test(durationStr)) {
+                return parseInt(durationStr);
+            }
+            
+            let dh = 0, dm = 0;
+            const hMatch = durationStr.match(/(\d+)\s*시간/);
+            const mMatch = durationStr.match(/(\d+)\s*분/);
+            if (hMatch) dh = parseInt(hMatch[1]);
+            if (mMatch) dm = parseInt(mMatch[1]);
+            
+            const hMatchEn = durationStr.match(/(\d+)\s*h/i);
+            const mMatchEn = durationStr.match(/(\d+)\s*m/i);
+            if (hMatchEn) dh = parseInt(hMatchEn[1]);
+            if (mMatchEn) dm = parseInt(mMatchEn[1]);
+            
+            return dh * 60 + dm;
+        }
+
         const todayKST = getKSTDate();
         const todayYear = todayKST.getFullYear();
         const todayMonth = todayKST.getMonth(); // 0-indexed
@@ -1134,8 +1157,9 @@
             }
 
             if (task.duration) {
-                const hMatch = task.duration.match(/(\d+)\s*시간/);
-                const mMatch = task.duration.match(/(\d+)\s*분/);
+                const durationStr = String(task.duration);
+                const hMatch = durationStr.match(/(\d+)\s*시간/);
+                const mMatch = durationStr.match(/(\d+)\s*분/);
                 document.getElementById('add-sub-dhour').value = hMatch ? parseInt(hMatch[1]) : '';
                 document.getElementById('add-sub-dmin').value = mMatch ? parseInt(mMatch[1]) : '';
             } else {
@@ -2441,17 +2465,11 @@
             const cellMinutes = hour * 60 + part * 10;
 
             for (const task of dayTasks) {
-                if (!task.startTime || !task.duration) continue;
+                if (!task.startTime) continue;
 
                 const [sh, sm] = task.startTime.split(':').map(Number);
-                let dh = 0, dm = 0;
-                const hMatch = task.duration.match(/(\d+)\s*시간/);
-                const mMatch = task.duration.match(/(\d+)\s*분/);
-                if (hMatch) dh = parseInt(hMatch[1]);
-                if (mMatch) dm = parseInt(mMatch[1]);
-
                 const startTotalMinutes = sh * 60 + sm;
-                const durationMinutes = dh * 60 + dm;
+                const durationMinutes = parseDurationMinutes(task.duration);
                 const endTotalMinutes = startTotalMinutes + durationMinutes;
 
                 if (cellMinutes >= startTotalMinutes && cellMinutes < endTotalMinutes) {
@@ -2531,17 +2549,11 @@
 
                 if (isColorOn) {
                     dayTasks.forEach(task => {
-                        if (!task.startTime || !task.duration) return;
+                        if (!task.startTime) return;
                         
                         const [sh, sm] = task.startTime.split(':').map(Number);
-                        let dh = 0, dm = 0;
-                        const hMatch = task.duration.match(/(\d+)\s*시간/);
-                        const mMatch = task.duration.match(/(\d+)\s*분/);
-                        if (hMatch) dh = parseInt(hMatch[1]);
-                        if (mMatch) dm = parseInt(mMatch[1]);
-
                         const startTotalMinutes = sh * 60 + sm;
-                        const durationMinutes = dh * 60 + dm;
+                        const durationMinutes = parseDurationMinutes(task.duration);
                         const endTotalMinutes = startTotalMinutes + durationMinutes;
 
                         const rowStartMin = hour * 60;
@@ -2555,7 +2567,7 @@
                             const widthPercent = ((interEndMin - interStartMin) / 60) * 100;
 
                             const block = document.createElement('div');
-                            block.className = `absolute top-0 h-full rounded-sm flex items-center justify-center px-1 overflow-hidden pointer-events-none select-none`;
+                            block.className = `absolute top-0 h-full rounded-sm flex items-center justify-center px-1 overflow-hidden pointer-events-none select-none z-10`;
                             block.style.left = `${leftPercent}%`;
                             block.style.width = `${widthPercent}%`;
                             block.style.backgroundColor = task.color;
