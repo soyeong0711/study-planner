@@ -329,6 +329,28 @@
                                 <div class="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                             </label>
                         </div>
+
+                        <!-- D-Day Alerts Toggle Switch -->
+                        <div class="flex items-center justify-between py-1 border-t border-surface-variant/10 pt-2">
+                            <span class="font-bold text-on-surface-variant">마감일 D-Day 알림</span>
+                            <label class="relative inline-flex items-center cursor-pointer scale-90">
+                                <input type="checkbox" id="toggle-decor-alerts" checked class="sr-only peer" onchange="toggleGlobalAlerts(this.checked)" />
+                                <div class="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Data Backup & Restore -->
+                    <div class="border-t border-surface-variant/10 my-2 pt-2">
+                        <div class="px-4 py-1 text-[9px] font-bold text-on-surface-variant/60 uppercase tracking-wider">데이터 백업 및 복원</div>
+                        <button onclick="exportStudyPlan()" class="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]">
+                            <span class="material-symbols-outlined text-base text-primary">upload</span>
+                            <span>학습계획 내보내기 (저장)</span>
+                        </button>
+                        <button onclick="importStudyPlan()" class="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]">
+                            <span class="material-symbols-outlined text-base text-primary">download</span>
+                            <span>학습계획 가져오기 (불러오기)</span>
+                        </button>
                     </div>
 
                     <button onclick="handleLogout()" class="w-full px-4 py-3 rounded-xl hover:bg-error-container/10 flex items-center gap-3 text-xs font-bold text-error transition-all active:scale-[0.98]">
@@ -451,6 +473,24 @@
                         <h1 onclick="switchTab('planner')" class="font-headline font-bold text-xs text-primary cursor-pointer hover:opacity-80 transition-opacity" id="app-bar-title-label">Study Planner</h1>
                     </div>
                     <div class="flex items-center gap-2 relative">
+                        <!-- Bell Notification Icon -->
+                        <div class="relative">
+                            <button onclick="toggleNotificationMenu(event)" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high/80 text-on-surface-variant transition-colors relative" title="알림">
+                                <span class="material-symbols-outlined text-lg">notifications</span>
+                                <span id="notification-badge" class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full border border-white dark:border-neutral-900 hidden"></span>
+                            </button>
+                            <!-- Notification Dropdown Menu -->
+                            <div id="notification-dropdown" class="absolute right-0 top-11 w-60 bg-surface dark:bg-[#0c0f10] border border-surface-variant/30 rounded-2xl shadow-xl py-3 z-[90] hidden text-[10px] flex flex-col max-h-64">
+                                <div class="px-3 pb-2 border-b border-surface-variant/20 flex justify-between items-center font-bold">
+                                    <span class="text-primary text-[11px]">알림 센터</span>
+                                    <button onclick="clearAllNotifications(event)" class="text-[9px] text-error hover:underline">전체 삭제</button>
+                                </div>
+                                <div class="flex-1 overflow-y-auto custom-scrollbar px-2 py-1 space-y-1.5" id="notification-list-container">
+                                    <div class="text-center text-on-surface-variant/60 py-4">알림이 없습니다.</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <span id="header-username-label" class="text-[10px] font-bold text-on-surface-variant/90 mr-1 select-none">초보 탐험가</span>
                         <div onclick="toggleProfileMenu(event)" class="w-8 h-8 rounded-full overflow-hidden border border-primary-container shrink-0 cursor-pointer hover:opacity-85 transition-opacity" title="프로필 메뉴">
                             <img id="header-avatar-img" class="w-full h-full object-cover" src="" />
@@ -475,6 +515,10 @@
                     
                     <!-- Planner Tab View -->
                     <div id="view-planner" class="flex-1 flex flex-col p-3.5 space-y-3 relative">
+                        <!-- Top Active Banner Notifications -->
+                        <div id="planner-top-alerts-container" class="space-y-1.5 hidden shrink-0">
+                            <!-- Banner alerts rendered dynamically -->
+                        </div>
                         <!-- Date Selector and Top Stats -->
                         <div class="flex items-center justify-between bg-primary/10 p-2.5 rounded-2xl border border-primary/20">
                             <div class="flex items-center gap-1">
@@ -489,6 +533,16 @@
                             <div class="text-right">
                                 <span class="text-[8px] font-bold text-on-surface-variant block uppercase tracking-wider">총 공부 시간</span>
                                 <span class="font-headline font-bold text-sm text-primary tabular-nums tracking-tighter" id="global-timer-display">00:00:00</span>
+                            </div>
+                        </div>
+
+                        <!-- Today's Completion Stats Bar -->
+                        <div class="flex items-center justify-between px-3 py-1.5 bg-surface-container-low dark:bg-neutral-800 rounded-xl border border-surface-variant/20 text-[10px] font-bold shrink-0">
+                            <span class="text-on-surface-variant">오늘의 학습 현황</span>
+                            <div class="flex gap-2.5 items-center">
+                                <span class="text-primary flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">check_circle</span>완료 <span id="completed-tasks-count">0</span>개</span>
+                                <span class="text-on-surface-variant/40">|</span>
+                                <span class="text-error flex items-center gap-0.5"><span class="material-symbols-outlined text-[11px]">pending</span>남음 <span id="remaining-tasks-count">0</span>개</span>
                             </div>
                         </div>
 
@@ -824,7 +878,7 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block font-bold text-on-surface-variant mb-1">소요 시간</label>
+                        <label class="block font-bold text-on-surface-variant mb-1">예상 소요 시간</label>
                         <div class="flex items-center gap-1 bg-surface-container-low border border-outline-variant/60 rounded-xl px-2 py-1">
                             <input type="number" id="add-sub-dhour" min="0" max="12" placeholder="2" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
                             <span class="text-[9px] text-on-surface-variant">h</span>
@@ -832,6 +886,11 @@
                             <span class="text-[9px] text-on-surface-variant">m</span>
                         </div>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-on-surface-variant mb-1">학습 마감일</label>
+                    <input type="date" id="add-sub-duedate" class="w-full bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-2 focus:outline-none focus:border-primary text-on-surface" />
                 </div>
 
                 <div>
@@ -907,7 +966,8 @@
             bgMode: "light",
             cardRoundness: "standard",
             soundEnabled: true,
-            customMascotUrl: ""
+            customMascotUrl: "",
+            deadlineAlertsEnabled: true
         };
 
         // User database list for Local Signups
@@ -924,6 +984,7 @@
         let calendarMoods = {};
         let timetableDrawings = {}; // Manual timeline coloring
         let studyNotes = {}; // Concept memos & wrong answers
+        let notifications = []; // Alerts
 
         let currentActiveTab = 'planner';
         let currentPlannerDate = '2026-06-03';
@@ -962,6 +1023,7 @@
             document.getElementById('add-sub-smin').value = '';
             document.getElementById('add-sub-dhour').value = '';
             document.getElementById('add-sub-dmin').value = '';
+            document.getElementById('add-sub-duedate').value = '';
 
             // Auto-select a different color not used by existing tasks on currentPlannerDate
             const paletteColors = ['#a5d8d1', '#e9d9ff', '#eee3ad', '#bae6fd', '#fbcfe8', '#bbf7d0', '#fed7aa', '#e5e7eb'];
@@ -999,6 +1061,7 @@
 
             document.getElementById('add-sub-title').value = task.title || '';
             document.getElementById('add-sub-desc').value = task.description || '';
+            document.getElementById('add-sub-duedate').value = task.dueDate || '';
 
             if (task.startTime) {
                 const [sh, sm] = task.startTime.split(':');
@@ -1046,6 +1109,7 @@
             const sminIn = document.getElementById('add-sub-smin').value.trim();
             const dhourIn = document.getElementById('add-sub-dhour').value.trim();
             const dminIn = document.getElementById('add-sub-dmin').value.trim();
+            const dueDateIn = document.getElementById('add-sub-duedate').value.trim();
 
             if (!titleIn) {
                 alert("과목명을 입력해주세요.");
@@ -1076,10 +1140,12 @@
             task.color = selectedAddSubColor;
             task.startTime = startTime;
             task.duration = duration;
+            task.dueDate = dueDateIn || null;
 
             saveAllData();
             renderPlanner();
             renderTimeTable();
+            checkDeadlineAlerts();
             closeAddSubjectModal();
             showCozyBubble("공부 계획이 수정되었습니다! 📝");
         }
@@ -1093,6 +1159,7 @@
             document.getElementById('add-sub-smin').value = '';
             document.getElementById('add-sub-dhour').value = '';
             document.getElementById('add-sub-dmin').value = '';
+            document.getElementById('add-sub-duedate').value = '';
         }
 
         function setAddSubColor(color, btnEl) {
@@ -1123,6 +1190,7 @@
             const sminIn = document.getElementById('add-sub-smin').value.trim();
             const dhourIn = document.getElementById('add-sub-dhour').value.trim();
             const dminIn = document.getElementById('add-sub-dmin').value.trim();
+            const dueDateIn = document.getElementById('add-sub-duedate').value.trim();
 
             if (!titleIn) {
                 alert("과목명을 입력해주세요.");
@@ -1155,13 +1223,15 @@
                 completed: '',
                 startTime: startTime,
                 duration: duration,
-                date: currentPlannerDate
+                date: currentPlannerDate,
+                dueDate: dueDateIn || null
             };
 
             tasks.push(newTask);
             saveAllData();
             renderPlanner();
             renderTimeTable();
+            checkDeadlineAlerts();
             closeAddSubjectModal();
         }
 
@@ -1174,9 +1244,11 @@
             }
             
             tasks = tasks.filter(t => t.id !== id);
+            notifications = notifications.filter(n => !n.key.startsWith(`alert_${id}_`));
             saveAllData();
             renderPlanner();
             renderTimeTable();
+            renderNotifications();
         }
 
         function setTaskCheck(id, status) {
@@ -1189,6 +1261,13 @@
                     task.completed = status;
                     if (status === 'o') {
                         addXP(50);
+                    } else if (status === 'triangle') {
+                        saveAllData();
+                        renderPlanner();
+                        setTimeout(() => {
+                            postponeTaskToNextDay(id);
+                        }, 600); // 600ms delay to show transition before postponement
+                        return;
                     }
                 }
                 saveAllData();
@@ -1319,6 +1398,9 @@
                 const savedLevel = localStorage.getItem('woolini_mascot_level');
                 if (savedLevel) mascotLevel = parseInt(savedLevel);
 
+                const savedNotifications = localStorage.getItem('woolini_notifications');
+                if (savedNotifications) notifications = JSON.parse(savedNotifications);
+
                 // Control Display based on Login Status
                 const loggedIn = localStorage.getItem('woolini_logged_in');
                 const gateway = document.getElementById('login-gateway');
@@ -1349,6 +1431,7 @@
                 localStorage.setItem('woolini_user_db', JSON.stringify(userDatabase));
                 localStorage.setItem('woolini_mascot_xp', mascotXP);
                 localStorage.setItem('woolini_mascot_level', mascotLevel);
+                localStorage.setItem('woolini_notifications', JSON.stringify(notifications));
             } catch(e) {
                 console.error("Failed to save planner data: ", e);
             }
@@ -1680,6 +1763,10 @@
             if (dropdown && !dropdown.classList.contains('hidden')) {
                 dropdown.classList.add('hidden');
             }
+            const notifDropdown = document.getElementById('notification-dropdown');
+            if (notifDropdown && !notifDropdown.classList.contains('hidden')) {
+                notifDropdown.classList.add('hidden');
+            }
         });
 
         // --- FLOATING MASCOT DIRECT TAB NAVIGATION ---
@@ -1718,6 +1805,9 @@
 
             const toggleRound = document.getElementById('toggle-decor-roundness');
             if (toggleRound) toggleRound.checked = (settings.cardRoundness !== 'sharp');
+
+            const toggleAlerts = document.getElementById('toggle-decor-alerts');
+            if (toggleAlerts) toggleAlerts.checked = (settings.deadlineAlertsEnabled !== false);
 
             // Apply decorations immediately
             applyTheme();
@@ -1808,6 +1898,259 @@
             renderPlanner();
             renderTimeTable();
             renderWeeklyCalendar();
+            checkDeadlineAlerts();
+        }
+
+        // --- NEW PLANNING HELPERS (D-DAY, COMPLETION & BACKUP/RESTORE) ---
+
+        function getDDayString(dueDateStr, plannerDateStr) {
+            if (!dueDateStr) return '';
+            const due = new Date(dueDateStr);
+            const plan = new Date(plannerDateStr);
+            due.setHours(0,0,0,0);
+            plan.setHours(0,0,0,0);
+            const diffTime = due.getTime() - plan.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays === 0) return 'D-Day';
+            if (diffDays > 0) return `D-${diffDays}`;
+            return `D+${Math.abs(diffDays)} (지남)`;
+        }
+
+        function toggleTaskComplete(id, checked) {
+            setTaskCheck(id, checked ? 'o' : '');
+        }
+
+        function postponeTaskToNextDay(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            
+            const currDate = new Date(task.date);
+            currDate.setDate(currDate.getDate() + 1);
+            const pad = (n) => String(n).padStart(2, '0');
+            const nextDateStr = `${currDate.getFullYear()}-${pad(currDate.getMonth() + 1)}-${pad(currDate.getDate())}`;
+            
+            const alreadyCopied = tasks.some(t => t.title === task.title && t.date === nextDateStr);
+            if (!alreadyCopied) {
+                const newTask = {
+                    ...task,
+                    id: Date.now() + Math.floor(Math.random() * 1000),
+                    date: nextDateStr,
+                    completed: '',
+                    timeSeconds: 0
+                };
+                tasks.push(newTask);
+            }
+            
+            task.completed = 'triangle';
+            
+            saveAllData();
+            renderPlanner();
+            renderTimeTable();
+            checkDeadlineAlerts();
+            showCozyBubble("공부 계획이 다음날로 복사되었습니다! 원래 계획도 유지됩니다. ➡️");
+        }
+
+        function toggleGlobalAlerts(enabled) {
+            settings.deadlineAlertsEnabled = enabled;
+            saveAllData();
+            if (enabled) {
+                checkDeadlineAlerts();
+            } else {
+                renderNotifications();
+            }
+        }
+
+        function checkDeadlineAlerts() {
+            if (settings.deadlineAlertsEnabled === false) {
+                renderNotifications();
+                return;
+            }
+
+            let alertCreated = false;
+            tasks.forEach(task => {
+                if (!task.dueDate) return;
+                
+                const due = new Date(task.dueDate);
+                const plan = new Date(currentPlannerDate);
+                due.setHours(0,0,0,0);
+                plan.setHours(0,0,0,0);
+                const diffTime = due.getTime() - plan.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if ([7, 3, 1].includes(diffDays)) {
+                    const alertKey = `alert_${task.id}_${diffDays}`;
+                    const exists = notifications.some(n => n.key === alertKey);
+                    if (!exists) {
+                        const dayWord = diffDays === 7 ? '일주일' : `${diffDays}일`;
+                        notifications.unshift({
+                            id: Date.now() + Math.random(),
+                            key: alertKey,
+                            text: `📢 [${task.title}] 마감일이 ${dayWord} 남았습니다!`,
+                            date: currentPlannerDate,
+                            read: false
+                        });
+                        alertCreated = true;
+                    }
+                }
+            });
+
+            if (alertCreated) {
+                saveAllData();
+            }
+            renderNotifications();
+        }
+
+        function renderNotifications() {
+            const listContainer = document.getElementById('notification-list-container');
+            const badge = document.getElementById('notification-badge');
+            const topAlertsContainer = document.getElementById('planner-top-alerts-container');
+
+            if (!listContainer || !badge || !topAlertsContainer) return;
+
+            const activeNotifications = settings.deadlineAlertsEnabled !== false ? notifications : [];
+
+            // Update badge (only unread)
+            const unreadCount = activeNotifications.filter(n => !n.read).length;
+            if (unreadCount > 0) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // Render Bell Dropdown
+            listContainer.innerHTML = '';
+            if (activeNotifications.length === 0) {
+                listContainer.innerHTML = `<div class="text-center text-on-surface-variant/60 py-4 select-none">알림이 없습니다.</div>`;
+            } else {
+                activeNotifications.forEach(notif => {
+                    const item = document.createElement('div');
+                    item.className = `p-2 rounded-xl flex items-start justify-between gap-1.5 transition-all text-[9px] ${notif.read ? 'opacity-50 bg-transparent' : 'bg-primary/5 dark:bg-primary/10 border border-primary/10 font-bold text-on-surface'}`;
+                    item.innerHTML = `
+                        <div class="flex-1 cursor-pointer" onclick="markNotificationAsRead(${notif.id})">
+                            <p class="leading-tight break-all">${escapeHtml(notif.text)}</p>
+                            <span class="text-[7px] text-on-surface-variant/50 block mt-0.5">${notif.date}</span>
+                        </div>
+                        <button onclick="deleteNotification(${notif.id}, event)" class="p-0.5 hover:bg-surface-container-high rounded-full text-on-surface-variant/65 hover:text-error transition-colors shrink-0">
+                            <span class="material-symbols-outlined text-[10px]">close</span>
+                        </button>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+
+            // Render Top Planner Banner Alerts
+            topAlertsContainer.innerHTML = '';
+            const unreadAlerts = activeNotifications.filter(n => !n.read);
+            if (unreadAlerts.length > 0) {
+                topAlertsContainer.classList.remove('hidden');
+                unreadAlerts.forEach(notif => {
+                    const banner = document.createElement('div');
+                    banner.className = `p-2 rounded-xl bg-error/10 border border-error/20 flex items-center justify-between gap-2 text-[9px] text-error dark:text-error-container bubbly-shadow`;
+                    banner.innerHTML = `
+                        <div class="flex items-center gap-1.5 overflow-hidden">
+                            <span class="material-symbols-outlined text-xs text-error font-bold">campaign</span>
+                            <span class="font-bold truncate leading-none">${escapeHtml(notif.text)}</span>
+                        </div>
+                        <button onclick="markNotificationAsRead(${notif.id})" class="p-0.5 hover:bg-error/10 rounded-full text-error transition-colors shrink-0">
+                            <span class="material-symbols-outlined text-xs font-bold">close</span>
+                        </button>
+                    `;
+                    topAlertsContainer.appendChild(banner);
+                });
+            } else {
+                topAlertsContainer.classList.add('hidden');
+            }
+        }
+
+        function toggleNotificationMenu(event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('notification-dropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('hidden');
+                const profileMenu = document.getElementById('profile-dropdown');
+                if (profileMenu) profileMenu.classList.add('hidden');
+            }
+        }
+
+        function clearAllNotifications(event) {
+            if (event) event.stopPropagation();
+            if (!confirm("모든 알림을 삭제하시겠습니까?")) return;
+            notifications = [];
+            saveAllData();
+            renderNotifications();
+        }
+
+        function markNotificationAsRead(id) {
+            const notif = notifications.find(n => n.id === id);
+            if (notif) {
+                notif.read = true;
+                saveAllData();
+                renderNotifications();
+            }
+        }
+
+        function deleteNotification(id, event) {
+            if (event) event.stopPropagation();
+            notifications = notifications.filter(n => n.id !== id);
+            saveAllData();
+            renderNotifications();
+        }
+
+        function exportStudyPlan() {
+            const backupData = {
+                tasks: tasks,
+                calendarNotes: calendarNotes,
+                calendarMoods: calendarMoods,
+                timetableDrawings: timetableDrawings,
+                studyNotes: studyNotes,
+                settings: settings
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `woolini_study_plan_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showCozyBubble("학습계획이 성공적으로 내보내졌습니다! 💾");
+        }
+
+        function importStudyPlan() {
+            if (!confirm("백업 파일을 가져오면 현재 저장된 플래너 데이터가 덮어씌워집니다. 계속하시겠습니까?")) return;
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const imported = JSON.parse(evt.target.result);
+                        if (imported.tasks) {
+                            tasks = imported.tasks;
+                            if (imported.calendarNotes) calendarNotes = imported.calendarNotes;
+                            if (imported.calendarMoods) calendarMoods = imported.calendarMoods;
+                            if (imported.timetableDrawings) timetableDrawings = imported.timetableDrawings;
+                            if (imported.studyNotes) studyNotes = imported.studyNotes;
+                            if (imported.settings) settings = imported.settings;
+                            
+                            saveAllData();
+                            applyGlobalProfileSettings();
+                            renderPlanner();
+                            renderTimeTable();
+                            renderCalendar();
+                            showCozyBubble("학습계획을 성공적으로 불러왔습니다! 📥");
+                        } else {
+                            alert("올바른 백업 파일 형식이 아닙니다.");
+                        }
+                    } catch (err) {
+                        alert("파일을 읽는 중 오류가 발생했습니다: " + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            fileInput.click();
         }
 
         function renderWeeklyCalendar() {
@@ -1868,6 +2211,15 @@
 
             const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
 
+            // Update stats bar
+            const completedCount = dayTasks.filter(t => t.completed === 'o').length;
+            const remainingCount = dayTasks.length - completedCount;
+
+            const compEl = document.getElementById('completed-tasks-count');
+            const remEl = document.getElementById('remaining-tasks-count');
+            if (compEl) compEl.innerText = completedCount;
+            if (remEl) remEl.innerText = remainingCount;
+
             let globalSeconds = 0;
 
             dayTasks.forEach(task => {
@@ -1888,13 +2240,22 @@
                 const timerString = formatTimerString(task.timeSeconds);
                 const isTicking = activeTimerTaskId === task.id && timerRunning;
 
+                const ddayStr = getDDayString(task.dueDate, currentPlannerDate);
+                const dueDateHtml = task.dueDate ? `
+                    <div class="flex items-center gap-1 text-[8px] font-bold text-error/80 mt-1 select-none">
+                        <span class="material-symbols-outlined text-[10px]">alarm</span>
+                        <span>마감일: ${task.dueDate} ${ddayStr ? `(${ddayStr})` : ''}</span>
+                    </div>
+                ` : '';
+
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-1.5 overflow-hidden">
-                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${task.color}"></span>
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <input type="checkbox" onchange="toggleTaskComplete(${task.id}, this.checked)" ${isO ? 'checked' : ''} class="w-3.5 h-3.5 text-primary bg-surface-container border-outline-variant/60 rounded focus:ring-primary focus:ring-1 shrink-0 cursor-pointer" />
                             <div class="overflow-hidden">
-                                <h4 class="text-xs font-bold text-on-surface truncate">${escapeHtml(task.title)}</h4>
-                                ${task.description ? `<p class="text-[9px] text-on-surface-variant/70 truncate">${escapeHtml(task.description)}</p>` : ''}
+                                <h4 class="text-xs font-bold text-on-surface truncate ${isO ? 'line-through opacity-50' : ''}">${escapeHtml(task.title)}</h4>
+                                ${task.description ? `<p class="text-[9px] text-on-surface-variant/70 truncate ${isO ? 'opacity-50' : ''}">${escapeHtml(task.description)}</p>` : ''}
+                                ${dueDateHtml}
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
@@ -1913,19 +2274,19 @@
                         <button onclick="setTaskCheck(${task.id}, 'x')" class="py-1 rounded-xl text-xs flex items-center justify-center transition-all ${xClass}">X</button>
                     </div>
 
-                    <div class="flex items-center gap-2 mt-1">
+                    <div class="flex items-center justify-between mt-1 gap-1 w-full">
                         <!-- 시간칸 (Time display box) -->
-                        <div class="flex-1 flex items-center justify-center gap-1.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-xl py-1.5 px-3 transition-colors">
-                            <span class="material-symbols-outlined text-[13px] text-primary ${isTicking ? 'animate-pulse' : ''}">timer</span>
-                            <span class="text-xs font-bold font-headline tabular-nums text-on-surface tracking-tighter" id="task-timer-${task.id}">${timerString}</span>
+                        <div class="flex-1 flex items-center justify-center gap-0.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-lg py-0.5 px-1 transition-colors min-w-0">
+                            <span class="material-symbols-outlined text-[9px] text-primary shrink-0 ${isTicking ? 'animate-pulse' : ''}">timer</span>
+                            <span class="text-[8px] font-bold font-headline tabular-nums text-on-surface tracking-tighter truncate" id="task-timer-${task.id}">${timerString}</span>
                         </div>
                         <!-- 버튼칸 (Button controls box) -->
-                        <div class="flex gap-1.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-xl p-1 shrink-0 transition-colors">
-                            <button onclick="toggleStopwatch(${task.id})" class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center shadow transition-transform active:scale-90" title="시작/일시정지">
-                                <span class="material-symbols-outlined text-sm">${isTicking ? 'pause' : 'play_arrow'}</span>
+                        <div class="flex gap-0.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-lg p-0.5 shrink-0 transition-colors">
+                            <button onclick="toggleStopwatch(${task.id})" class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center shadow transition-transform active:scale-90" title="시작/일시정지">
+                                <span class="material-symbols-outlined text-[10px]">${isTicking ? 'pause' : 'play_arrow'}</span>
                             </button>
-                            <button onclick="resetTaskStopwatch(${task.id})" class="w-7 h-7 rounded-full bg-surface-container-highest dark:bg-neutral-850 text-on-surface-variant flex items-center justify-center transition-colors active:scale-90" title="초기화">
-                                <span class="material-symbols-outlined text-xs">refresh</span>
+                            <button onclick="resetTaskStopwatch(${task.id})" class="w-5 h-5 rounded-full bg-surface-container-highest dark:bg-neutral-850 text-on-surface-variant flex items-center justify-center transition-colors active:scale-90" title="초기화">
+                                <span class="material-symbols-outlined text-[8px]">refresh</span>
                             </button>
                         </div>
                     </div>
@@ -2151,6 +2512,7 @@
                 const dateKey = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const hasNote = calendarNotes[dateKey];
                 const mood = calendarMoods[dateKey];
+                const dayTasks = tasks.filter(t => t.date === dateKey);
 
                 let cellClass = 'aspect-square flex flex-col items-center justify-center text-[10px] font-bold rounded-lg transition-all active:scale-90 relative ';
                 
@@ -2171,9 +2533,18 @@
                 else if (mood === 'focus') emoji = '📝';
                 else if (mood === 'passionate') emoji = '🔥';
 
+                // Display tiny color dots for tasks
+                let dotsHtml = '';
+                if (dayTasks.length > 0) {
+                    dotsHtml = `<div class="flex gap-0.5 justify-center mt-0.5 select-none pointer-events-none max-w-full overflow-hidden">` +
+                        dayTasks.slice(0, 3).map(t => `<span class="w-1 h-1 rounded-full shrink-0" style="background-color: ${t.color}"></span>`).join('') +
+                        (dayTasks.length > 3 ? `<span class="text-[5px] text-on-surface-variant/60 leading-none font-bold">+</span>` : '') +
+                        `</div>`;
+                }
+
                 cell.innerHTML = `
                     <span>${day}</span>
-                    ${emoji ? `<span class="text-[8px] absolute bottom-0.5">${emoji}</span>` : (hasNote ? `<span class="w-1 h-1 rounded-full bg-primary absolute bottom-1"></span>` : '')}
+                    ${emoji ? `<span class="text-[8px] absolute bottom-0.5">${emoji}</span>` : (dotsHtml ? dotsHtml : (hasNote ? `<span class="w-1.5 h-0.5 bg-primary absolute bottom-1"></span>` : ''))}
                 `;
 
                 cell.onclick = () => selectCalendarDay(day);
@@ -2202,11 +2573,12 @@
             selectedCalendarDay = day;
             
             const dateKey = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            document.getElementById('calendar-notes-title').innerText = `${currentCalendarYear}년 ${currentCalendarMonth + 1}월 ${day}일 메모`;
+            document.getElementById('calendar-notes-title').innerText = `${currentCalendarYear}년 ${currentCalendarMonth + 1}월 ${day}일 메모 및 계획`;
             
             const displayEl = document.getElementById('calendar-notes-display');
             const note = calendarNotes[dateKey];
             const mood = calendarMoods[dateKey];
+            const dayTasks = tasks.filter(t => t.date === dateKey);
 
             let moodStr = '';
             if (mood === 'happy') moodStr = ' 😊 (기쁨)';
@@ -2215,19 +2587,47 @@
             else if (mood === 'focus') moodStr = ' 📝 (집중)';
             else if (mood === 'passionate') moodStr = ' 🔥 (열정)';
 
-            if (note || mood) {
+            // Render tasks preview for this date
+            let tasksPreviewHtml = '';
+            if (dayTasks.length > 0) {
+                tasksPreviewHtml = `
+                    <div class="mt-3 pt-2.5 border-t border-surface-variant/20">
+                        <div class="text-[10px] font-bold text-primary mb-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">list_alt</span>
+                            <span>학습 계획 (${dayTasks.length}개)</span>
+                        </div>
+                        <div class="space-y-1.5">
+                            ${dayTasks.map(t => {
+                                const isCompleted = t.completed === 'o';
+                                return `
+                                    <div class="flex items-center justify-between p-2 rounded-xl bg-white/40 dark:bg-black/10 border border-surface-variant/10">
+                                        <div class="flex items-center gap-1.5 overflow-hidden">
+                                            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${t.color}"></span>
+                                            <span class="text-[10px] font-bold text-on-surface truncate ${isCompleted ? 'line-through opacity-50' : ''}">${escapeHtml(t.title)}</span>
+                                        </div>
+                                        <span class="text-[8px] font-semibold text-on-surface-variant px-1.5 py-0.5 rounded bg-surface-container-high/40">${t.duration || '0시간'}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (note || mood || dayTasks.length > 0) {
                 displayEl.innerHTML = `
                     <div class="space-y-2">
                         ${mood ? `<div class="font-bold text-secondary text-[11px]">오늘의 기분:${moodStr}</div>` : ''}
-                        <p class="bg-white/40 dark:bg-black/20 p-2.5 rounded-xl border border-surface-variant/10 text-on-surface">${escapeHtml(note || '')}</p>
-                        <button onclick="openCalendarNoteModal()" class="mt-2 text-primary font-bold hover:underline flex items-center gap-0.5">계획 편집/삭제</button>
+                        ${note ? `<p class="bg-white/40 dark:bg-black/20 p-2.5 rounded-xl border border-surface-variant/10 text-on-surface">${escapeHtml(note || '')}</p>` : ''}
+                        <button onclick="openCalendarNoteModal()" class="text-primary font-bold hover:underline flex items-center gap-0.5 text-[10px]">메모/기분 편집</button>
+                        ${tasksPreviewHtml}
                     </div>
                 `;
             } else {
                 displayEl.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full py-4 text-center text-on-surface-variant/60">
-                        <p class="mb-2">기록된 메모와 기분이 없습니다.</p>
-                        <button onclick="openCalendarNoteModal()" class="px-3.5 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 font-bold transition-all text-[11px] active:scale-95">새 계획 및 기분 추가</button>
+                        <p class="mb-2">기록된 메모와 계획이 없습니다.</p>
+                        <button onclick="openCalendarNoteModal()" class="px-3.5 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 font-bold transition-all text-[11px] active:scale-95">새 메모 및 기분 추가</button>
                     </div>
                 `;
             }
@@ -2932,6 +3332,7 @@
             applyGlobalProfileSettings();
             switchTab('planner');
             renderWeeklyCalendar();
+            checkDeadlineAlerts();
         });
     </script>
 </body>
