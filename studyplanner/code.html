@@ -1977,15 +1977,23 @@
                 const diffTime = due.getTime() - plan.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                if ([7, 3, 1].includes(diffDays)) {
+                if ([7, 3, 1, 0].includes(diffDays)) {
                     const alertKey = `alert_${task.id}_${diffDays}`;
                     const exists = notifications.some(n => n.key === alertKey);
                     if (!exists) {
-                        const dayWord = diffDays === 7 ? '일주일' : `${diffDays}일`;
+                        let dayWord = '';
+                        if (diffDays === 7) dayWord = '일주일';
+                        else if (diffDays === 0) dayWord = '오늘';
+                        else dayWord = `${diffDays}일`;
+                        
+                        const notifText = diffDays === 0 
+                            ? `📢 [${task.title}] 마감일이 오늘까지입니다!` 
+                            : `📢 [${task.title}] 마감일이 ${dayWord} 남았습니다!`;
+
                         notifications.unshift({
                             id: Date.now() + Math.random(),
                             key: alertKey,
-                            text: `📢 [${task.title}] 마감일이 ${dayWord} 남았습니다!`,
+                            text: notifText,
                             date: currentPlannerDate,
                             read: false
                         });
@@ -2040,7 +2048,24 @@
 
             // Render Top Planner Banner Alerts
             topAlertsContainer.innerHTML = '';
-            const unreadAlerts = activeNotifications.filter(n => !n.read);
+            
+            // Render persistent D-Day banners for tasks due today (non-dismissible)
+            const dueTodayTasks = tasks.filter(t => t.dueDate === currentPlannerDate);
+            if (dueTodayTasks.length > 0) {
+                topAlertsContainer.classList.remove('hidden');
+                dueTodayTasks.forEach(task => {
+                    const banner = document.createElement('div');
+                    banner.className = `p-2 rounded-xl bg-error/10 border border-error/25 flex items-center gap-1.5 text-[9px] text-error dark:text-error-container bubbly-shadow animate-pulse`;
+                    banner.innerHTML = `
+                        <span class="material-symbols-outlined text-xs text-error font-bold">alarm</span>
+                        <span class="font-bold leading-none truncate">오늘 마감: [${escapeHtml(task.title)}] 마감일이 오늘까지입니다! ⚠️</span>
+                    `;
+                    topAlertsContainer.appendChild(banner);
+                });
+            }
+            
+            // Render regular unread alerts (dismissible), excluding today's deadline alerts since they are persistently displayed above
+            const unreadAlerts = activeNotifications.filter(n => !n.read && !n.key.endsWith('_0'));
             if (unreadAlerts.length > 0) {
                 topAlertsContainer.classList.remove('hidden');
                 unreadAlerts.forEach(notif => {
@@ -2057,7 +2082,9 @@
                     `;
                     topAlertsContainer.appendChild(banner);
                 });
-            } else {
+            }
+
+            if (dueTodayTasks.length === 0 && unreadAlerts.length === 0) {
                 topAlertsContainer.classList.add('hidden');
             }
         }
@@ -2209,11 +2236,13 @@
             const listContainer = document.getElementById('subject-cards-list');
             listContainer.innerHTML = '';
 
-            const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
+            const dueTodayTasks = tasks.filter(t => t.dueDate === currentPlannerDate);
+            const regularTasks = tasks.filter(t => t.date === currentPlannerDate && t.dueDate !== currentPlannerDate);
+            const allVisibleTasks = [...dueTodayTasks, ...regularTasks];
 
             // Update stats bar
-            const completedCount = dayTasks.filter(t => t.completed === 'o').length;
-            const remainingCount = dayTasks.length - completedCount;
+            const completedCount = allVisibleTasks.filter(t => t.completed === 'o').length;
+            const remainingCount = allVisibleTasks.length - completedCount;
 
             const compEl = document.getElementById('completed-tasks-count');
             const remEl = document.getElementById('remaining-tasks-count');
@@ -2221,13 +2250,19 @@
             if (remEl) remEl.innerText = remainingCount;
 
             let globalSeconds = 0;
+            allVisibleTasks.forEach(t => {
+                globalSeconds += t.timeSeconds;
+            });
 
-            dayTasks.forEach(task => {
-                globalSeconds += task.timeSeconds;
-
+            function createTaskCard(task, isDueGroup) {
                 const card = document.createElement('div');
                 card.className = `p-3 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-surface-variant/30 flex flex-col gap-2.5 transition-all bubbly-shadow relative`;
-                card.style.borderLeft = `5px solid ${task.color}`;
+                
+                if (isDueGroup) {
+                    card.style.borderLeft = `5px solid #ef4444`;
+                } else {
+                    card.style.borderLeft = `5px solid ${task.color}`;
+                }
 
                 const isO = task.completed === 'o';
                 const isTri = task.completed === 'triangle';
@@ -2248,12 +2283,17 @@
                     </div>
                 ` : '';
 
+                const topBadgeHtml = isDueGroup ? `<span class="inline-block text-[7px] bg-error/15 text-error px-1 py-0.5 rounded font-bold mr-1 shrink-0">오늘 마감</span>` : '';
+
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 overflow-hidden">
+                        <div class="flex items-center gap-2 overflow-hidden w-full">
                             <input type="checkbox" onchange="toggleTaskComplete(${task.id}, this.checked)" ${isO ? 'checked' : ''} class="w-3.5 h-3.5 text-primary bg-surface-container border-outline-variant/60 rounded focus:ring-primary focus:ring-1 shrink-0 cursor-pointer" />
                             <div class="overflow-hidden">
-                                <h4 class="text-xs font-bold text-on-surface truncate ${isO ? 'line-through opacity-50' : ''}">${escapeHtml(task.title)}</h4>
+                                <h4 class="text-xs font-bold text-on-surface truncate flex items-center ${isO ? 'line-through opacity-50' : ''}">
+                                    ${topBadgeHtml}
+                                    <span class="truncate">${escapeHtml(task.title)}</span>
+                                </h4>
                                 ${task.description ? `<p class="text-[9px] text-on-surface-variant/70 truncate ${isO ? 'opacity-50' : ''}">${escapeHtml(task.description)}</p>` : ''}
                                 ${dueDateHtml}
                             </div>
@@ -2291,8 +2331,42 @@
                         </div>
                     </div>
                 `;
-                listContainer.appendChild(card);
-            });
+                return card;
+            }
+
+            // Render Due Today group if exists
+            if (dueTodayTasks.length > 0) {
+                const dueHeader = document.createElement('div');
+                dueHeader.className = 'text-[9px] font-bold text-error flex items-center gap-1 mt-1 mb-1 select-none uppercase tracking-wider shrink-0';
+                dueHeader.innerHTML = `<span class="material-symbols-outlined text-[11px] font-bold">alarm</span>오늘 마감 (D-Day)`;
+                listContainer.appendChild(dueHeader);
+
+                dueTodayTasks.forEach(task => {
+                    listContainer.appendChild(createTaskCard(task, true));
+                });
+            }
+
+            // Render Regular Tasks group
+            if (regularTasks.length > 0) {
+                if (dueTodayTasks.length > 0) {
+                    const regHeader = document.createElement('div');
+                    regHeader.className = 'text-[9px] font-bold text-on-surface-variant/70 flex items-center gap-1 mt-3 mb-1 select-none uppercase tracking-wider shrink-0 border-t border-surface-variant/10 pt-2';
+                    regHeader.innerHTML = `<span class="material-symbols-outlined text-[11px]">list_alt</span>오늘의 할 일`;
+                    listContainer.appendChild(regHeader);
+                }
+
+                regularTasks.forEach(task => {
+                    listContainer.appendChild(createTaskCard(task, false));
+                });
+            }
+
+            // Fallback empty message
+            if (allVisibleTasks.length === 0) {
+                const emptyMsg = document.createElement('p');
+                emptyMsg.className = 'text-[10px] text-on-surface-variant/60 italic text-center py-4';
+                emptyMsg.innerText = '오늘 등록된 계획이 없습니다.';
+                listContainer.appendChild(emptyMsg);
+            }
 
             document.getElementById('global-timer-display').innerText = formatTimerString(globalSeconds);
         }
