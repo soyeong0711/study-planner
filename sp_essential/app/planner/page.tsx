@@ -1,5 +1,6 @@
-// 학습 계획 및 플래너 메인 화면. 투두 관리, 타임테이블 작성, 목표 달성률 확인 기능이 포함되어 있습니다.
+// 기존 단일 HTML(code.html)의 플래너 기능을 Next.js 프레임워크 기반으로 전환하여 구현한 플래너 메인 화면(투두 관리, 타임테이블 작성, 목표 달성률 확인)입니다.
 "use client";
+
 
 import React, { useState, useEffect, useRef } from "react";
 import { useApp, Task } from "@/lib/AppContext";

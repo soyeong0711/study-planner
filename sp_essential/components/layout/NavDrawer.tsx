@@ -1,5 +1,6 @@
-// 사이드 네비게이션 드로어 (마이페이지 조회, Cozy Mint 등 어플 테마 색상 설정, 다크 모드 토글, 데이터 백업/복원 기능 제공) 컴포넌트입니다.
+// 기존 단일 HTML(code.html)의 마이페이지/테마 설정 및 데이터 백업/복원 기능을 Next.js 컴포넌트로 리팩토링한 사이드 네비게이션 드로어 컴포넌트입니다.
 "use client";
+
 
 import React, { useState } from "react";
 import { useApp } from "@/lib/AppContext";

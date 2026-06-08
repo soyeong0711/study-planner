@@ -1,5 +1,6 @@
-// HTML 기본 레이아웃 구성 및 App Context Provider 연동 파일입니다.
+// 기존 단일 HTML(code.html)의 HTML 메타 구조를 Next.js App Router용 root Layout 구성으로 전환한 파일입니다.
 import type { Metadata } from "next";
+
 
 import Providers from "@/components/Providers";
 import PhoneShell from "@/components/layout/PhoneShell";

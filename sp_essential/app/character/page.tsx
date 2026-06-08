@@ -1,5 +1,6 @@
-// 학습 동기 부여를 위한 마스코트 캐릭터 방 꾸미기 및 캐릭터 육성 화면입니다.
+// 기존 단일 HTML(code.html)의 마스코트 상호작용 및 캐릭터 기능을 Next.js 프레임워크 기반으로 전환하여 구현한 캐릭터 육성 및 스터디 메이트 화면입니다.
 "use client";
+
 
 import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "@/lib/AppContext";

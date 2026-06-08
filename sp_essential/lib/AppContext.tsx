@@ -1,5 +1,6 @@
-// 전체 화면에서 공유되는 학습 계획, 타이머, 캐릭터, 테마 상태를 React Context API로 관리하는 Context 파일입니다.
+// 기존 단일 HTML(code.html)의 로컬 스토리지 데이터 관리 로직을 Next.js 환경에 맞게 React Context API 및 전역 상태(학습 계획, 타이머, 캐릭터, 테마 등)로 리팩토링한 Context 파일입니다.
 "use client";
+
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 

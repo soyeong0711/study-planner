@@ -1,5 +1,6 @@
-/* 어플리케이션 전역 테마 및 TailwindCSS 컬러/유틸리티 스타일 정의 파일입니다. */
+/* 기존 단일 HTML(code.html) 내부의 CSS 스타일 및 테마 변수를 Next.js 글로벌 스타일시트 및 Tailwind CSS v4 사양으로 통합 전환한 파일입니다. */
 @import "tailwindcss";
+
 
 
 @custom-variant dark (&:where(.dark, .dark *));

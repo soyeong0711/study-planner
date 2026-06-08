@@ -1,5 +1,6 @@
-// 개념 정리 노트 및 학습 중 발생한 오답 노트 관리 화면입니다.
+// 기존 단일 HTML(code.html)의 오답노트/개념 노트를 Next.js 프레임워크 기반으로 전환하여 구현한 개념 정리 및 오답 노트 관리 화면입니다.
 "use client";
+
 
 import React, { useState } from "react";
 import { useApp, Concept, WrongAnswer } from "@/lib/AppContext";

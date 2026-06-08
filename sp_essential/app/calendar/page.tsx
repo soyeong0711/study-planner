@@ -1,5 +1,6 @@
-// 학습 기록 및 기분을 관리하는 캘린더 화면. 날짜별 메모와 분위기를 시각적으로 확인합니다.
+// 기존 단일 HTML(code.html)의 캘린더를 Next.js 프레임워크 기반으로 변환하여 구현한 학습 기록 및 기분 관리 달력 화면입니다.
 "use client";
+
 
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/AppContext";

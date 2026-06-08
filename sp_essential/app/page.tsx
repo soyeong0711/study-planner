@@ -1,5 +1,6 @@
-// 로그인 및 자체 회원가입, 소셜 간편 로그인 데모 기능 구현
+// 기존 단일 HTML(code.html)을 Next.js 프레임워크 기반으로 변환하여 구현한 로그인 및 자체 회원가입, 소셜 간편 로그인 데모 화면입니다.
 "use client";
+
 
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/AppContext";

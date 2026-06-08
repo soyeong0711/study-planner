@@ -1,5 +1,6 @@
-// 모바일 인터페이스를 위한 하단 메뉴 탭 전환 네비게이션 컴포넌트입니다.
+// 기존 단일 HTML(code.html)의 탭 전환 방식을 Next.js의 라우팅 구조에 맞게 최적화한 하단 탭 네비게이션 컴포넌트입니다.
 "use client";
+
 
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";

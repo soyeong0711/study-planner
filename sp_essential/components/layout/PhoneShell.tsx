@@ -1,5 +1,6 @@
-// 모바일 환경과 같이 연출해주는 데스크톱용 스마트폰 모양의 테두리 쉘 구성 컴포넌트입니다.
+// 기존 단일 HTML(code.html)의 안드로이드 폰 프레임 디자인 및 글로벌 레이아웃을 Next.js용 Phone Shell 컴포넌트로 독립화한 파일입니다.
 "use client";
+
 
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/AppContext";

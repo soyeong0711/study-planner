@@ -1,5 +1,6 @@
-// 상단 헤더 영역 (현재 날짜 표시, 마스코트 현황 요약 및 사이드 메뉴 버튼 제공) 컴포넌트입니다.
+// 기존 단일 HTML(code.html)의 상단 영역을 Next.js 기반으로 모듈화한 상단 헤더 컴포넌트입니다.
 "use client";
+
 
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "@/lib/AppContext";
