@@ -119,6 +119,115 @@
         .timetable-cell-active {
             border-color: rgba(255, 255, 255, 0.2) !important;
         }
+
+        /* Eye-Comfort Premium Dark Mode Style Overrides */
+        html.dark #app-screen,
+        html.dark #nav-drawer,
+        html.dark #login-gateway {
+            background-color: #07090a !important;
+            color: #cbd5e1 !important;
+        }
+        html.dark header {
+            background-color: rgba(7, 9, 10, 0.8) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark nav {
+            background-color: #07090a !important;
+            border-top-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark #planner-weekly-calendar {
+            background-color: #0c0f10 !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark #planner-weekly-calendar button:not(.bg-primary) {
+            background-color: #07090a !important;
+            border-color: rgba(255, 255, 255, 0.04) !important;
+            color: #94a3b8 !important;
+        }
+        html.dark #subject-cards-list > div,
+        html.dark #concepts-list > div,
+        html.dark #wrong-answers-list > div {
+            background-color: #0c0f10 !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        /* Right Column (Timetable) container and grid */
+        html.dark #view-planner .col-span-7 {
+            background-color: #0c0f10 !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark #timetable-grid {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark .timetable-grid-cell {
+            background-color: #07090a !important;
+            border-right-color: rgba(255, 255, 255, 0.04) !important;
+        }
+        html.dark .timetable-grid-cell:hover {
+            background-color: rgba(255, 255, 255, 0.04) !important;
+        }
+        /* Notes and Character Tab containers */
+        html.dark #view-notes .bg-surface-container-lowest,
+        html.dark #view-character .bg-surface-container-lowest,
+        html.dark #view-calendar .bg-surface-container-lowest {
+            background-color: #0c0f10 !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark #calendar-days-container button:not(.bg-primary):not(.bg-primary\/20) {
+            background-color: #07090a !important;
+            color: #cbd5e1 !important;
+        }
+        html.dark #calendar-days-container div {
+            background-color: rgba(255, 255, 255, 0.02) !important;
+            color: rgba(255, 255, 255, 0.15) !important;
+        }
+        /* Modals and popups */
+        html.dark div[id$="-modal"] > div,
+        html.dark #calendar-note-modal > div,
+        html.dark #profile-dropdown {
+            background-color: #0c0f10 !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+        }
+        html.dark div[id$="-modal"] input,
+        html.dark div[id$="-modal"] textarea,
+        html.dark div[id$="-modal"] select,
+        html.dark #calendar-note-modal textarea {
+            background-color: #07090a !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #f1f5f9 !important;
+        }
+        /* Typography adjustments to prevent eye strain */
+        html.dark .text-on-surface {
+            color: #f1f5f9 !important;
+        }
+        html.dark .text-on-surface-variant,
+        html.dark [class*="text-on-surface-variant"] {
+            color: #94a3b8 !important;
+        }
+        html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+            color: #f1f5f9 !important;
+        }
+        /* Accent/borders highlight in dark mode */
+        html.dark .border-primary {
+            border-color: var(--primary-color, #356761) !important;
+        }
+
+        /* Container styling overrides in dark mode */
+        html.dark .bg-surface-container-low,
+        html.dark .bg-surface-container-low\/40,
+        html.dark .bg-surface-container-low\/60,
+        html.dark .bg-surface-container-low\/80 {
+            background-color: #0c0f10 !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark .bg-surface-container-high {
+            background-color: #12181a !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        html.dark .bg-surface-container-lowest {
+            background-color: #07090a !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-900 via-neutral-900 to-slate-950 min-h-screen flex items-center justify-center p-0 md:p-6 overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container">
@@ -339,7 +448,7 @@
                         <button onclick="toggleNavDrawer(true)" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high/80 text-on-surface-variant transition-colors animate-pulse" title="메뉴">
                             <span class="material-symbols-outlined text-xl">menu</span>
                         </button>
-                        <h1 class="font-headline font-bold text-xs text-primary" id="app-bar-title-label">Study Planner</h1>
+                        <h1 onclick="switchTab('planner')" class="font-headline font-bold text-xs text-primary cursor-pointer hover:opacity-80 transition-opacity" id="app-bar-title-label">Study Planner</h1>
                     </div>
                     <div class="flex items-center gap-2 relative">
                         <span id="header-username-label" class="text-[10px] font-bold text-on-surface-variant/90 mr-1 select-none">초보 탐험가</span>
@@ -393,7 +502,7 @@
                             
                             <!-- Left Column: Subject Cards List (5/12 width) -->
                             <div class="col-span-5 flex flex-col gap-2.5 min-h-0 overflow-y-auto no-scrollbar">
-                                <div class="flex-1 flex flex-col gap-2.5" id="subject-cards-list">
+                                <div class="flex flex-col gap-2.5" id="subject-cards-list">
                                     <!-- Generated Dynamically -->
                                 </div>
                                 <button onclick="openAddSubjectModal()" class="w-full py-2.5 border-2 border-dashed border-primary/30 hover:border-primary/60 rounded-xl flex items-center justify-center gap-1 text-primary text-[10px] font-bold transition-all active:scale-[0.97] bg-primary/5 hover:bg-primary/10">
@@ -489,14 +598,29 @@
                         </div>
 
                         <!-- 1. Concept Section -->
-                        <div id="note-concept-section" class="flex-1 flex flex-col space-y-3">
-                            <div class="bg-surface-container-lowest dark:bg-surface-container rounded-2xl p-3 border border-surface-variant/30 flex flex-col gap-2 shadow-sm">
-                                <span class="text-[10px] font-bold text-primary flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[14px]">psychology</span>
-                                    <span>오늘의 개념 및 메모 정리</span>
-                                </span>
-                                <textarea id="note-concept-input" placeholder="오늘 공부한 주요 공식이나 핵심 요약 내용을 기록하세요..." class="w-full bg-surface-container-low border border-outline-variant/60 rounded-xl p-2.5 text-xs text-on-surface resize-none focus:outline-none focus:border-primary" rows="5"></textarea>
-                                <button onclick="saveConceptSummary()" class="py-2.5 bg-primary bubbly-button rounded-full text-white font-bold text-[10px] transition-all">개념 정리 저장</button>
+                        <div id="note-concept-section" class="flex-1 flex flex-col space-y-3 min-h-0">
+                            <div class="flex-1 flex flex-col bg-surface-container-lowest dark:bg-surface-container rounded-2xl p-3 border border-surface-variant/30 min-h-0 shadow-sm">
+                                <div class="flex justify-between items-center mb-2 shrink-0">
+                                    <span class="text-[10px] font-bold text-primary flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[14px]">psychology</span>
+                                        <span>오늘의 개념 및 메모 정리 목록</span>
+                                    </span>
+                                    <button onclick="downloadAllConcepts()" class="px-2 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[9px] font-bold transition-all flex items-center gap-0.5" title="전체 다운로드">
+                                        <span class="material-symbols-outlined text-[12px]">download</span>
+                                        <span>전체 다운로드</span>
+                                    </button>
+                                </div>
+                                <div class="flex-1 overflow-y-auto pr-0.5 custom-scrollbar space-y-2 mb-3" id="concepts-list">
+                                    <!-- concept card items will be rendered dynamically -->
+                                </div>
+                                <div class="bg-surface-container-low p-2.5 rounded-xl border border-surface-variant/20 space-y-2 text-[10px] shrink-0">
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <input type="date" id="concept-date" class="bg-white border border-outline-variant/60 rounded-lg px-2 py-1.5 focus:outline-none text-on-surface" />
+                                        <input type="text" id="concept-subject" placeholder="과목 (예: 수학)" class="bg-white border border-outline-variant/60 rounded-lg px-2 py-1.5 focus:outline-none text-on-surface" />
+                                    </div>
+                                    <textarea id="concept-content" placeholder="공부한 주요 공식이나 핵심 요약 내용을 기록하세요..." class="w-full bg-white border border-outline-variant/60 rounded-lg p-2 text-xs text-on-surface resize-none focus:outline-none focus:border-primary" rows="3"></textarea>
+                                    <button onclick="addConceptSummary()" class="w-full py-2 bg-primary text-white font-bold rounded-lg transition-transform active:scale-95">개념 요약 추가하기</button>
+                                </div>
                             </div>
                         </div>
 
@@ -585,9 +709,18 @@
                                     <span class="text-[7px] font-bold">커스텀</span>
                                 </button>
                             </div>
-                            <div class="flex gap-1.5 mt-1 border-t border-surface-variant/20 pt-2">
-                                <input type="text" id="custom-mascot-url" placeholder="나만의 캐릭터 이미지 주소..." class="flex-1 bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-1.5 text-[9px] focus:outline-none focus:border-primary text-on-surface" />
-                                <button onclick="saveCustomMascotImage()" class="px-3 py-1.5 bg-primary text-white text-[9px] font-bold rounded-xl active:scale-95 transition-all">등록</button>
+                            <div class="flex flex-col gap-1.5 mt-1 border-t border-surface-variant/20 pt-2 text-[9px]">
+                                <div class="flex gap-1.5 items-center">
+                                    <input type="text" id="custom-mascot-url" placeholder="나만의 캐릭터 이미지 주소..." class="flex-1 bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-1.5 text-[9px] focus:outline-none focus:border-primary text-on-surface" />
+                                    <button onclick="saveCustomMascotImage()" class="px-3 py-1.5 bg-primary text-white text-[9px] font-bold rounded-xl active:scale-95 transition-all">등록</button>
+                                </div>
+                                <div class="flex justify-between items-center gap-1.5 border-t border-dashed border-surface-variant/10 pt-1.5">
+                                    <span class="text-on-surface-variant/60 font-semibold pl-1">또는 로컬 사진 파일 업로드:</span>
+                                    <label class="px-3 py-1 bg-secondary text-white text-[9px] font-bold rounded-xl cursor-pointer hover:bg-secondary/95 transition-colors shrink-0 text-center select-none active:scale-95">
+                                        <span>사진 선택</span>
+                                        <input type="file" accept="image/*" class="hidden" onchange="handleCustomMascotUpload(this)" />
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -663,7 +796,7 @@
         <div class="bg-surface dark:bg-inverse-surface rounded-3xl max-w-[340px] w-full p-5 bubbly-shadow border border-surface-variant/20 scale-95 transition-transform duration-300">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="font-headline font-bold text-base text-primary">공부 계획 수립 및 과목 추가</h3>
+                    <h3 class="font-headline font-bold text-base text-primary" id="add-sub-modal-title">공부 계획 수립 및 과목 추가</h3>
                     <p class="text-[10px] text-on-surface-variant/80 mt-0.5">과목별 계획 시간 및 색상을 지정하세요.</p>
                 </div>
                 <button class="p-1 rounded-full hover:bg-surface-container-high" onclick="closeAddSubjectModal()">
@@ -717,7 +850,7 @@
 
                 <div class="flex gap-2 pt-3">
                     <button onclick="closeAddSubjectModal()" class="flex-1 py-2.5 rounded-full bg-surface-container-highest hover:bg-surface-dim font-bold text-on-surface-variant text-center transition-colors">취소</button>
-                    <button onclick="addNewSubject()" class="flex-[2] py-2.5 rounded-full bg-primary bubbly-button font-bold text-white text-center transition-all">계획 추가</button>
+                    <button id="add-sub-modal-submit-btn" onclick="handleSubjectSubmit()" class="flex-[2] py-2.5 rounded-full bg-primary bubbly-button font-bold text-white text-center transition-all">계획 추가</button>
                 </div>
             </div>
         </div>
@@ -779,6 +912,7 @@
 
         // User database list for Local Signups
         let userDatabase = [];
+        let editingTaskId = null;
 
         // Tasks / Planner Subject List
         let tasks = [
@@ -816,7 +950,138 @@
         // --- CORE PLANNER HELPER FUNCTIONS ---
 
         function openAddSubjectModal() {
+            editingTaskId = null;
+            const titleEl = document.getElementById('add-sub-modal-title');
+            if (titleEl) titleEl.innerText = "공부 계획 수립 및 과목 추가";
+            const btnEl = document.getElementById('add-sub-modal-submit-btn');
+            if (btnEl) btnEl.innerText = "계획 추가";
+
+            document.getElementById('add-sub-title').value = '';
+            document.getElementById('add-sub-desc').value = '';
+            document.getElementById('add-sub-shour').value = '';
+            document.getElementById('add-sub-smin').value = '';
+            document.getElementById('add-sub-dhour').value = '';
+            document.getElementById('add-sub-dmin').value = '';
+
+            // Auto-select a different color not used by existing tasks on currentPlannerDate
+            const paletteColors = ['#a5d8d1', '#e9d9ff', '#eee3ad', '#bae6fd', '#fbcfe8', '#bbf7d0', '#fed7aa', '#e5e7eb'];
+            const usedColors = tasks.filter(t => t.date === currentPlannerDate).map(t => t.color);
+            
+            let autoColor = paletteColors[0];
+            for (const color of paletteColors) {
+                if (!usedColors.includes(color)) {
+                    autoColor = color;
+                    break;
+                }
+            }
+
+            selectedAddSubColor = autoColor;
+            const colorButtons = document.querySelectorAll('#add-sub-color-palette button');
+            colorButtons.forEach(btn => {
+                const onclickAttr = btn.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(selectedAddSubColor)) {
+                    setAddSubColor(selectedAddSubColor, btn);
+                }
+            });
+
             document.getElementById('add-subject-modal').classList.remove('hidden');
+        }
+
+        function openEditSubjectModal(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            editingTaskId = id;
+            const titleEl = document.getElementById('add-sub-modal-title');
+            if (titleEl) titleEl.innerText = "공부 계획 수정";
+            const btnEl = document.getElementById('add-sub-modal-submit-btn');
+            if (btnEl) btnEl.innerText = "수정 완료";
+
+            document.getElementById('add-sub-title').value = task.title || '';
+            document.getElementById('add-sub-desc').value = task.description || '';
+
+            if (task.startTime) {
+                const [sh, sm] = task.startTime.split(':');
+                document.getElementById('add-sub-shour').value = parseInt(sh);
+                document.getElementById('add-sub-smin').value = parseInt(sm);
+            } else {
+                document.getElementById('add-sub-shour').value = '';
+                document.getElementById('add-sub-smin').value = '';
+            }
+
+            if (task.duration) {
+                const hMatch = task.duration.match(/(\d+)\s*시간/);
+                const mMatch = task.duration.match(/(\d+)\s*분/);
+                document.getElementById('add-sub-dhour').value = hMatch ? parseInt(hMatch[1]) : '';
+                document.getElementById('add-sub-dmin').value = mMatch ? parseInt(mMatch[1]) : '';
+            } else {
+                document.getElementById('add-sub-dhour').value = '';
+                document.getElementById('add-sub-dmin').value = '';
+            }
+
+            selectedAddSubColor = task.color || '#a5d8d1';
+            const colorButtons = document.querySelectorAll('#add-sub-color-palette button');
+            colorButtons.forEach(btn => {
+                const onclickAttr = btn.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(selectedAddSubColor)) {
+                    setAddSubColor(selectedAddSubColor, btn);
+                }
+            });
+
+            document.getElementById('add-subject-modal').classList.remove('hidden');
+        }
+
+        function handleSubjectSubmit() {
+            if (editingTaskId === null) {
+                addNewSubject();
+            } else {
+                saveEditedSubject();
+            }
+        }
+
+        function saveEditedSubject() {
+            const titleIn = document.getElementById('add-sub-title').value.trim();
+            const descIn = document.getElementById('add-sub-desc').value.trim();
+            const shourIn = document.getElementById('add-sub-shour').value.trim();
+            const sminIn = document.getElementById('add-sub-smin').value.trim();
+            const dhourIn = document.getElementById('add-sub-dhour').value.trim();
+            const dminIn = document.getElementById('add-sub-dmin').value.trim();
+
+            if (!titleIn) {
+                alert("과목명을 입력해주세요.");
+                return;
+            }
+
+            const task = tasks.find(t => t.id === editingTaskId);
+            if (!task) return;
+
+            let startTime = null;
+            if (shourIn !== '' && sminIn !== '') {
+                const sh = parseInt(shourIn);
+                const sm = parseInt(sminIn);
+                if (sh >= 0 && sh <= 23 && sm >= 0 && sm <= 59) {
+                    startTime = `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`;
+                }
+            }
+
+            let duration = '0시간 0분';
+            if (dhourIn !== '' || dminIn !== '') {
+                const dh = parseInt(dhourIn) || 0;
+                const dm = parseInt(dminIn) || 0;
+                duration = `${dh}시간 ${dm}분`;
+            }
+
+            task.title = titleIn;
+            task.description = descIn;
+            task.color = selectedAddSubColor;
+            task.startTime = startTime;
+            task.duration = duration;
+
+            saveAllData();
+            renderPlanner();
+            renderTimeTable();
+            closeAddSubjectModal();
+            showCozyBubble("공부 계획이 수정되었습니다! 📝");
         }
 
         function closeAddSubjectModal() {
@@ -1632,9 +1897,14 @@
                                 ${task.description ? `<p class="text-[9px] text-on-surface-variant/70 truncate">${escapeHtml(task.description)}</p>` : ''}
                             </div>
                         </div>
-                        <button onclick="deleteSubject(${task.id})" class="text-on-surface-variant/40 hover:text-error transition-colors shrink-0">
-                            <span class="material-symbols-outlined text-[16px]">delete</span>
-                        </button>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button onclick="openEditSubjectModal(${task.id})" class="text-on-surface-variant/40 hover:text-primary transition-colors" title="수정">
+                                <span class="material-symbols-outlined text-[16px]">edit</span>
+                            </button>
+                            <button onclick="deleteSubject(${task.id})" class="text-on-surface-variant/40 hover:text-error transition-colors" title="삭제">
+                                <span class="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-1">
@@ -1643,13 +1913,18 @@
                         <button onclick="setTaskCheck(${task.id}, 'x')" class="py-1 rounded-xl text-xs flex items-center justify-center transition-all ${xClass}">X</button>
                     </div>
 
-                    <div class="flex items-center justify-between bg-surface-container-high/50 p-2 rounded-xl border border-surface-variant/20">
-                        <span class="text-xs font-bold font-headline tabular-nums text-on-surface tracking-tighter" id="task-timer-${task.id}">${timerString}</span>
-                        <div class="flex gap-1.5">
-                            <button onclick="toggleStopwatch(${task.id})" class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center shadow transition-transform active:scale-90">
+                    <div class="flex items-center gap-2 mt-1">
+                        <!-- 시간칸 (Time display box) -->
+                        <div class="flex-1 flex items-center justify-center gap-1.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-xl py-1.5 px-3 transition-colors">
+                            <span class="material-symbols-outlined text-[13px] text-primary ${isTicking ? 'animate-pulse' : ''}">timer</span>
+                            <span class="text-xs font-bold font-headline tabular-nums text-on-surface tracking-tighter" id="task-timer-${task.id}">${timerString}</span>
+                        </div>
+                        <!-- 버튼칸 (Button controls box) -->
+                        <div class="flex gap-1.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-xl p-1 shrink-0 transition-colors">
+                            <button onclick="toggleStopwatch(${task.id})" class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center shadow transition-transform active:scale-90" title="시작/일시정지">
                                 <span class="material-symbols-outlined text-sm">${isTicking ? 'pause' : 'play_arrow'}</span>
                             </button>
-                            <button onclick="resetTaskStopwatch(${task.id})" class="w-7 h-7 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors active:scale-90">
+                            <button onclick="resetTaskStopwatch(${task.id})" class="w-7 h-7 rounded-full bg-surface-container-highest dark:bg-neutral-850 text-on-surface-variant flex items-center justify-center transition-colors active:scale-90" title="초기화">
                                 <span class="material-symbols-outlined text-xs">refresh</span>
                             </button>
                         </div>
@@ -1662,6 +1937,31 @@
         }
 
         // --- TIMETABLE GRID DRAWER ---
+
+        function getTaskColorForCell(hour, part) {
+            const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
+            const cellMinutes = hour * 60 + part * 10;
+
+            for (const task of dayTasks) {
+                if (!task.startTime || !task.duration) continue;
+
+                const [sh, sm] = task.startTime.split(':').map(Number);
+                let dh = 0, dm = 0;
+                const hMatch = task.duration.match(/(\d+)\s*시간/);
+                const mMatch = task.duration.match(/(\d+)\s*분/);
+                if (hMatch) dh = parseInt(hMatch[1]);
+                if (mMatch) dm = parseInt(mMatch[1]);
+
+                const startTotalMinutes = sh * 60 + sm;
+                const durationMinutes = dh * 60 + dm;
+                const endTotalMinutes = startTotalMinutes + durationMinutes;
+
+                if (cellMinutes >= startTotalMinutes && cellMinutes < endTotalMinutes) {
+                    return task.color;
+                }
+            }
+            return null;
+        }
 
         function renderTimeTable() {
             const scroller = document.getElementById('timetable-scroller');
@@ -1717,9 +2017,15 @@
                     };
 
                     const key = `${currentPlannerDate}_${hour}_${part}`;
-                    if (timetableDrawings[key] && isColorOn) {
-                        col.style.backgroundColor = timetableDrawings[key];
-                        col.classList.add('timetable-cell-active');
+                    const taskColor = getTaskColorForCell(hour, part);
+                    if (isColorOn) {
+                        if (taskColor) {
+                            col.style.backgroundColor = taskColor;
+                            col.classList.add('timetable-cell-active');
+                        } else if (timetableDrawings[key]) {
+                            col.style.backgroundColor = timetableDrawings[key];
+                            col.classList.add('timetable-cell-active');
+                        }
                     }
 
                     grid.appendChild(col);
@@ -1951,25 +2257,288 @@
             }
         }
 
+        function openCalendarNoteModal() {
+            const day = selectedCalendarDay || 2;
+            const dateKey = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            // Set date label text
+            const labelEl = document.getElementById('cal-modal-date-label');
+            if (labelEl) {
+                labelEl.innerText = `${currentCalendarYear}년 ${currentCalendarMonth + 1}월 ${day}일`;
+            }
+            
+            // Set text input content
+            const noteInput = document.getElementById('cal-modal-note-input');
+            const existingNote = calendarNotes[dateKey] || '';
+            if (noteInput) {
+                noteInput.value = existingNote;
+            }
+            
+            // Set active mood highlight
+            const existingMood = calendarMoods[dateKey] || '';
+            setCalModalMood(existingMood);
+            
+            // Show or hide delete button based on whether there is existing content
+            const deleteBtn = document.getElementById('cal-modal-delete-btn');
+            if (deleteBtn) {
+                if (existingNote || existingMood) {
+                    deleteBtn.classList.remove('hidden');
+                } else {
+                    deleteBtn.classList.add('hidden');
+                }
+            }
+            
+            // Open modal with smooth scale animation
+            const modal = document.getElementById('calendar-note-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                const contentDiv = modal.querySelector('.scale-95, .scale-100');
+                if (contentDiv) {
+                    setTimeout(() => {
+                        contentDiv.classList.remove('scale-95');
+                        contentDiv.classList.add('scale-100');
+                    }, 10);
+                }
+            }
+        }
+
+        function closeCalendarNoteModal() {
+            const modal = document.getElementById('calendar-note-modal');
+            if (modal) {
+                const contentDiv = modal.querySelector('.scale-100, .scale-95');
+                if (contentDiv) {
+                    contentDiv.classList.remove('scale-100');
+                    contentDiv.classList.add('scale-95');
+                }
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        function setCalModalMood(mood) {
+            selectedCalendarMood = mood;
+            const moods = ['happy', 'calm', 'tired', 'focus', 'passionate'];
+            moods.forEach(m => {
+                const btn = document.getElementById(`mood-btn-${m}`);
+                if (btn) {
+                    if (m === mood) {
+                        btn.className = 'py-1.5 rounded-lg border-2 border-primary bg-primary/10 text-center text-[10px] flex flex-col items-center font-bold transition-all';
+                    } else {
+                        btn.className = 'py-1.5 rounded-lg border border-surface-variant bg-surface-container-low text-center text-[10px] flex flex-col items-center hover:bg-surface-container-high transition-all';
+                    }
+                }
+            });
+        }
+
+        function saveCalendarNote() {
+            const day = selectedCalendarDay || 2;
+            const dateKey = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            const noteInput = document.getElementById('cal-modal-note-input');
+            const noteVal = noteInput ? noteInput.value.trim() : '';
+            const moodVal = selectedCalendarMood || '';
+            
+            if (!noteVal && !moodVal) {
+                delete calendarNotes[dateKey];
+                delete calendarMoods[dateKey];
+            } else {
+                if (noteVal) {
+                    calendarNotes[dateKey] = noteVal;
+                } else {
+                    delete calendarNotes[dateKey];
+                }
+                if (moodVal) {
+                    calendarMoods[dateKey] = moodVal;
+                } else {
+                    delete calendarMoods[dateKey];
+                }
+            }
+            
+            saveAllData();
+            renderCalendar();
+            closeCalendarNoteModal();
+            showCozyBubble("계획과 기분이 저장되었습니다! 🍀");
+        }
+
+        function deleteCalendarNote() {
+            const day = selectedCalendarDay || 2;
+            const dateKey = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            delete calendarNotes[dateKey];
+            delete calendarMoods[dateKey];
+            
+            saveAllData();
+            renderCalendar();
+            closeCalendarNoteModal();
+            showCozyBubble("기록이 삭제되었습니다. 🗑️");
+        }
+
         // --- 4. STUDY NOTES TAB VIEW ---
 
         function renderStudyNotesTab() {
             const dateKey = currentPlannerDate;
-            const noteData = studyNotes[dateKey] || { concepts: '', wrongAnswers: [] };
-            document.getElementById('note-concept-input').value = noteData.concepts || '';
+            
+            const dateInput = document.getElementById('concept-date');
+            if (dateInput) {
+                dateInput.value = dateKey;
+            }
+
+            // Migrate legacy string concepts data if any
+            if (studyNotes[dateKey] && typeof studyNotes[dateKey].concepts === 'string') {
+                const oldText = studyNotes[dateKey].concepts;
+                studyNotes[dateKey].concepts = oldText ? [{
+                    id: Date.now(),
+                    subject: '일반',
+                    date: dateKey,
+                    content: oldText
+                }] : [];
+            }
+
+            renderConceptsList();
             renderWrongAnswersList();
         }
 
-        function saveConceptSummary() {
-            const dateKey = currentPlannerDate;
-            const text = document.getElementById('note-concept-input').value.trim();
+        function renderConceptsList() {
+            const container = document.getElementById('concepts-list');
+            if (!container) return;
+            container.innerHTML = '';
 
-            if (!studyNotes[dateKey]) {
-                studyNotes[dateKey] = { concepts: '', wrongAnswers: [] };
+            const dateKey = currentPlannerDate;
+            const noteData = studyNotes[dateKey] || { concepts: [], wrongAnswers: [] };
+            const list = Array.isArray(noteData.concepts) ? noteData.concepts : [];
+
+            if (list.length === 0) {
+                container.innerHTML = `<p class="text-xs text-on-surface-variant/60 italic text-center py-4">등록된 개념 요약이 없습니다.</p>`;
+                return;
             }
-            studyNotes[dateKey].concepts = text;
+
+            list.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'p-2.5 rounded-xl border border-surface-variant/30 bg-surface-container-low/40 flex flex-col gap-1.5 transition-all';
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-1.5">
+                        <div class="flex items-center gap-1.5 overflow-hidden">
+                            <span class="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-white">${escapeHtml(item.subject)}</span>
+                            <span class="text-[9px] font-bold text-on-surface-variant/70">${escapeHtml(item.date)}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="downloadConceptSummary(${item.id})" class="p-1 rounded-md hover:bg-surface-container-high transition-colors" title="다운로드">
+                                <span class="material-symbols-outlined text-[15px] text-primary">download</span>
+                            </button>
+                            <button onclick="deleteConceptSummary(${item.id})" class="p-1 rounded-md text-on-surface-variant/40 hover:text-error transition-colors" title="삭제">
+                                <span class="material-symbols-outlined text-[15px]">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-on-surface leading-relaxed whitespace-pre-wrap">${escapeHtml(item.content)}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function addConceptSummary() {
+            const dateIn = document.getElementById('concept-date').value;
+            const subjectIn = document.getElementById('concept-subject').value.trim();
+            const contentIn = document.getElementById('concept-content').value.trim();
+
+            if (!dateIn || !subjectIn || !contentIn) {
+                alert("날짜, 과목, 요약 내용은 필수 입력 사항입니다.");
+                return;
+            }
+
+            if (!studyNotes[dateIn]) {
+                studyNotes[dateIn] = { concepts: [], wrongAnswers: [] };
+            }
+            if (!Array.isArray(studyNotes[dateIn].concepts)) {
+                const oldText = typeof studyNotes[dateIn].concepts === 'string' ? studyNotes[dateIn].concepts : '';
+                studyNotes[dateIn].concepts = oldText ? [{
+                    id: Date.now() - 1,
+                    subject: '일반',
+                    date: dateIn,
+                    content: oldText
+                }] : [];
+            }
+
+            studyNotes[dateIn].concepts.push({
+                id: Date.now(),
+                subject: subjectIn,
+                date: dateIn,
+                content: contentIn
+            });
+
             saveAllData();
-            showCozyBubble("개념 요약이 안전하게 보관되었습니다! 💡");
+            showCozyBubble("개념 요약이 추가되었습니다! 💡");
+
+            // Reset inputs
+            document.getElementById('concept-subject').value = '';
+            document.getElementById('concept-content').value = '';
+
+            renderConceptsList();
+        }
+
+        function deleteConceptSummary(id) {
+            const dateKey = currentPlannerDate;
+            const noteData = studyNotes[dateKey];
+            if (!noteData || !Array.isArray(noteData.concepts)) return;
+
+            noteData.concepts = noteData.concepts.filter(c => c.id !== id);
+            saveAllData();
+            renderConceptsList();
+        }
+
+        function downloadConceptSummary(id) {
+            const dateKey = currentPlannerDate;
+            const noteData = studyNotes[dateKey];
+            if (!noteData || !Array.isArray(noteData.concepts)) return;
+
+            const item = noteData.concepts.find(c => c.id === id);
+            if (!item) return;
+
+            const contentText = `[스터디 플래너 개념 요약]\n` +
+                                `날짜: ${item.date}\n` +
+                                `과목: ${item.subject}\n\n` +
+                                `[요약 내용]\n` +
+                                `${item.content}`;
+
+            const blob = new Blob([contentText], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `개념요약_${item.subject}_${item.date}.txt`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadAllConcepts() {
+            const dateKey = currentPlannerDate;
+            const noteData = studyNotes[dateKey];
+            if (!noteData || !Array.isArray(noteData.concepts) || noteData.concepts.length === 0) {
+                alert("다운로드할 개념 요약이 없습니다.");
+                return;
+            }
+
+            let contentText = `=== 스터디 플래너 개념 요약 (${dateKey}) ===\n\n`;
+            noteData.concepts.forEach((item, index) => {
+                contentText += `[${index + 1}] 과목: ${item.subject} | 날짜: ${item.date}\n`;
+                contentText += `내용:\n${item.content}\n`;
+                contentText += `-`.repeat(40) + `\n\n`;
+            });
+
+            const blob = new Blob([contentText], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `개념요약_전체_${dateKey}.txt`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         function renderWrongAnswersList() {
@@ -1977,7 +2546,7 @@
             container.innerHTML = '';
 
             const dateKey = currentPlannerDate;
-            const noteData = studyNotes[dateKey] || { concepts: '', wrongAnswers: [] };
+            const noteData = studyNotes[dateKey] || { concepts: [], wrongAnswers: [] };
             const list = noteData.wrongAnswers || [];
 
             if (list.length === 0) {
@@ -2062,7 +2631,7 @@
 
             const dateKey = currentPlannerDate;
             if (!studyNotes[dateKey]) {
-                studyNotes[dateKey] = { concepts: '', wrongAnswers: [] };
+                studyNotes[dateKey] = { concepts: [], wrongAnswers: [] };
             }
 
             const newId = Date.now();
@@ -2167,6 +2736,23 @@
             renderCharacterTab();
             applyGlobalProfileSettings();
             showCozyBubble("나만의 커스텀 캐릭터 이미지가 등록되었습니다! 🐾");
+        }
+
+        function handleCustomMascotUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const dataUrl = e.target.result;
+                    settings.customMascotUrl = dataUrl;
+                    settings.activeMascot = 'custom';
+                    
+                    saveAllData();
+                    renderCharacterTab();
+                    applyGlobalProfileSettings();
+                    showCozyBubble("나만의 커스텀 캐릭터 사진이 등록되었습니다! 🐾");
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
         }
 
         function updateXPBarDisplay() {
