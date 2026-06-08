@@ -1,16 +1,12 @@
+// 전역 Context Provider 설정 컴포넌트입니다.
 "use client";
 
-import { SessionProvider } from "next-auth/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { AppProvider } from "@/lib/AppContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
   return (
-    <SessionProvider>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    </SessionProvider>
+    <AppProvider>
+      {children}
+    </AppProvider>
   );
 }
