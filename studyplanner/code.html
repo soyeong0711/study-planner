@@ -1181,9 +1181,9 @@
             if (!task) return;
 
             let startTime = null;
-            if (shourIn !== '' && sminIn !== '') {
+            if (shourIn !== '') {
                 const sh = parseInt(shourIn);
-                const sm = parseInt(sminIn);
+                const sm = sminIn !== '' ? parseInt(sminIn) : 0;
                 if (sh >= 0 && sh <= 23 && sm >= 0 && sm <= 59) {
                     startTime = `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`;
                 }
@@ -1259,9 +1259,9 @@
             }
 
             let startTime = null;
-            if (shourIn !== '' && sminIn !== '') {
+            if (shourIn !== '') {
                 const sh = parseInt(shourIn);
-                const sm = parseInt(sminIn);
+                const sm = sminIn !== '' ? parseInt(sminIn) : 0;
                 if (sh >= 0 && sh <= 23 && sm >= 0 && sm <= 59) {
                     startTime = `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`;
                 }
@@ -2531,7 +2531,7 @@
 
                 if (isColorOn) {
                     dayTasks.forEach(task => {
-                        if (!task.startTime) return;
+                        if (!task.startTime || !task.duration) return;
                         
                         const [sh, sm] = task.startTime.split(':').map(Number);
                         let dh = 0, dm = 0;
