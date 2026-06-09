@@ -274,6 +274,28 @@
 
                 <!-- Navigation Drawer Items -->
                 <div class="flex-1 p-3 space-y-2">
+
+                    <!-- Tab Navigation Section -->
+                    <div class="border-b border-surface-variant/10 pb-2 mb-1">
+                        <div class="px-4 py-1 text-[9px] font-bold text-on-surface-variant/60 uppercase tracking-wider">화면 이동</div>
+                        <button onclick="switchTab('planner'); toggleNavDrawer(false)" class="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]">
+                            <span class="material-symbols-outlined text-base text-primary">timer</span>
+                            <span>플래너</span>
+                        </button>
+                        <button onclick="switchTab('calendar'); toggleNavDrawer(false)" class="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]">
+                            <span class="material-symbols-outlined text-base text-primary">calendar_month</span>
+                            <span>달력</span>
+                        </button>
+                        <button onclick="switchTab('notes'); toggleNavDrawer(false)" class="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]">
+                            <span class="material-symbols-outlined text-base text-primary">description</span>
+                            <span>노트</span>
+                        </button>
+                        <button onclick="switchTab('character'); toggleNavDrawer(false)" class="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]">
+                            <span class="material-symbols-outlined text-base text-primary">smart_toy</span>
+                            <span>캐릭터</span>
+                        </button>
+                    </div>
+
                     <button onclick="triggerMyPageFromDrawer()" class="w-full px-4 py-3 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]">
                         <span class="material-symbols-outlined text-lg text-primary">account_circle</span>
                         <span>내 마이페이지</span>
@@ -525,7 +547,10 @@
                                 <button onclick="changePlannerDate(-1)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/20 transition-all text-primary active:scale-95">
                                     <span class="material-symbols-outlined text-base">chevron_left</span>
                                 </button>
-                                <span class="font-headline font-bold text-xs text-primary tracking-wide" id="planner-date-label"></span>
+                                <div class="flex flex-col items-center">
+                                    <span class="font-headline font-bold text-xs text-primary tracking-wide" id="planner-date-label"></span>
+                                    <span id="planner-today-badge" class="hidden text-[7px] font-bold bg-primary text-white px-1.5 py-0.5 rounded-full leading-none mt-0.5">오늘</span>
+                                </div>
                                 <button onclick="changePlannerDate(1)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/20 transition-all text-primary active:scale-95">
                                     <span class="material-symbols-outlined text-base">chevron_right</span>
                                 </button>
@@ -888,9 +913,23 @@
                     </div>
                 </div>
 
-                <div>
+<div>
                     <label class="block font-bold text-on-surface-variant mb-1">학습 마감일</label>
-                    <input type="date" id="add-sub-duedate" class="w-full bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-2 focus:outline-none focus:border-primary text-on-surface" />
+                    <div class="flex items-center gap-1 bg-surface-container-low border border-outline-variant/60 rounded-xl px-2 py-1.5">
+                        <button type="button" onclick="changeDueDateByDay(-1)" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-primary/20 text-primary shrink-0 transition-all active:scale-90">
+                            <span class="material-symbols-outlined text-[13px]">chevron_left</span>
+                        </button>
+                        <input type="text" id="add-sub-duedate-text" placeholder="YYYY-MM-DD" maxlength="10"
+                            oninput="syncDueDateFromText(this.value)"
+                            class="flex-1 bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface min-w-0" />
+                        <button type="button" onclick="changeDueDateByDay(1)" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-primary/20 text-primary shrink-0 transition-all active:scale-90">
+                            <span class="material-symbols-outlined text-[13px]">chevron_right</span>
+                        </button>
+                        <label class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-primary/20 text-primary cursor-pointer shrink-0 transition-all active:scale-90" title="달력으로 선택">
+                            <span class="material-symbols-outlined text-[13px]">calendar_today</span>
+                            <input type="date" id="add-sub-duedate" class="sr-only" onchange="syncDueDateFromPicker(this.value)" />
+                        </label>
+                    </div>
                 </div>
 
                 <div>
@@ -950,6 +989,23 @@
                     <button onclick="deleteCalendarNote()" id="cal-modal-delete-btn" class="flex-1 py-2.5 rounded-full bg-error hover:bg-error/80 font-bold text-white text-center transition-colors hidden">삭제</button>
                     <button onclick="saveCalendarNote()" class="flex-[2] py-2.5 rounded-full bg-primary bubbly-button font-bold text-white text-center transition-all">저장</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="delete-confirm-modal" class="fixed inset-0 z-[105] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-surface dark:bg-[#0c0f10] rounded-3xl max-w-[280px] w-full p-5 bubbly-shadow border border-surface-variant/20">
+            <div class="text-center mb-4">
+                <div class="w-12 h-12 rounded-full bg-error/15 flex items-center justify-center mx-auto mb-3">
+                    <span class="material-symbols-outlined text-xl text-error">delete_forever</span>
+                </div>
+                <h3 class="font-headline font-bold text-sm text-on-surface">일정 삭제</h3>
+                <p class="text-[10px] text-on-surface-variant mt-1">이 공부 계획을 삭제하시겠습니까?<br>삭제 후 복구할 수 없습니다.</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="delete-cancel-btn" class="flex-1 py-2.5 rounded-full bg-surface-container-highest font-bold text-xs text-on-surface-variant transition-colors hover:bg-surface-dim">취소</button>
+                <button id="delete-confirm-btn" class="flex-1 py-2.5 rounded-full bg-error font-bold text-xs text-white transition-colors hover:bg-error/80">삭제</button>
             </div>
         </div>
     </div>
@@ -1023,6 +1079,51 @@
             if (!dateStr) return new Date();
             const parts = dateStr.split('-');
             return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+
+        function getVisibleTasksForDate(dateStr) {
+            const dueTodayTasks = tasks.filter(t => t.dueDate === dateStr);
+            const regularTasks = tasks.filter(t => t.date === dateStr && t.dueDate !== dateStr);
+            return [...dueTodayTasks, ...regularTasks];
+        }
+
+        function checkAutoPostponeIncompleteTasks() {
+            const todayKSTStr = getKSTDateString();
+            let modified = false;
+            let loops = 0;
+            while (loops < 30) {
+                let postponedAny = false;
+                for (let i = 0; i < tasks.length; i++) {
+                    const task = tasks[i];
+                    if (task.date < todayKSTStr && task.completed === '') {
+                        const currDate = parseLocalDate(task.date);
+                        currDate.setDate(currDate.getDate() + 1);
+                        const pad = (n) => String(n).padStart(2, '0');
+                        const nextDateStr = `${currDate.getFullYear()}-${pad(currDate.getMonth() + 1)}-${pad(currDate.getDate())}`;
+                        
+                        const alreadyCopied = tasks.some(t => t.title === task.title && t.date === nextDateStr);
+                        if (!alreadyCopied) {
+                            const newTask = {
+                                ...task,
+                                id: Date.now() + Math.floor(Math.random() * 100000),
+                                date: nextDateStr,
+                                completed: '',
+                                timeSeconds: 0
+                            };
+                            tasks.push(newTask);
+                        }
+                        
+                        task.completed = 'triangle';
+                        postponedAny = true;
+                        modified = true;
+                    }
+                }
+                if (!postponedAny) break;
+                loops++;
+            }
+            if (modified) {
+                saveAllData();
+            }
         }
 
         function parseDurationMinutes(duration) {
@@ -1108,10 +1209,11 @@
             document.getElementById('add-sub-dhour').value = '';
             document.getElementById('add-sub-dmin').value = '';
             document.getElementById('add-sub-duedate').value = '';
+            document.getElementById('add-sub-duedate-text').value = '';
 
             // Auto-select a different color not used by existing tasks on currentPlannerDate
             const paletteColors = ['#a5d8d1', '#e9d9ff', '#eee3ad', '#bae6fd', '#fbcfe8', '#bbf7d0', '#fed7aa', '#e5e7eb'];
-            const usedColors = tasks.filter(t => t.date === currentPlannerDate).map(t => t.color);
+            const usedColors = getVisibleTasksForDate(currentPlannerDate).map(t => t.color);
             
             let autoColor = paletteColors[0];
             for (const color of paletteColors) {
@@ -1146,6 +1248,7 @@
             document.getElementById('add-sub-title').value = task.title || '';
             document.getElementById('add-sub-desc').value = task.description || '';
             document.getElementById('add-sub-duedate').value = task.dueDate || '';
+            document.getElementById('add-sub-duedate-text').value = task.dueDate || '';
 
             if (task.startTime) {
                 const [sh, sm] = task.startTime.split(':');
@@ -1245,6 +1348,50 @@
             document.getElementById('add-sub-dhour').value = '';
             document.getElementById('add-sub-dmin').value = '';
             document.getElementById('add-sub-duedate').value = '';
+            document.getElementById('add-sub-duedate-text').value = '';
+        }
+
+        // --- DUE DATE PICKER HELPERS ---
+        function syncDueDateFromText(val) {
+            const clean = val.trim();
+            // Auto-insert hyphens as user types
+            const el = document.getElementById('add-sub-duedate-text');
+            let digits = clean.replace(/\D/g, '');
+            let formatted = digits;
+            if (digits.length > 4) formatted = digits.slice(0, 4) + '-' + digits.slice(4);
+            if (digits.length > 6) formatted = digits.slice(0, 4) + '-' + digits.slice(4, 6) + '-' + digits.slice(6, 8);
+            if (formatted !== clean) {
+                el.value = formatted;
+            }
+            // Sync to hidden date input only if valid date
+            if (/^\d{4}-\d{2}-\d{2}$/.test(formatted)) {
+                document.getElementById('add-sub-duedate').value = formatted;
+            } else {
+                document.getElementById('add-sub-duedate').value = '';
+            }
+        }
+
+        function syncDueDateFromPicker(val) {
+            document.getElementById('add-sub-duedate-text').value = val;
+            document.getElementById('add-sub-duedate').value = val;
+        }
+
+        function changeDueDateByDay(delta) {
+            const current = document.getElementById('add-sub-duedate').value;
+            let d;
+            if (current && /^\d{4}-\d{2}-\d{2}$/.test(current)) {
+                const parts = current.split('-');
+                d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            } else {
+                // Default to today (KST)
+                const kst = getKSTParts();
+                d = new Date(kst.year, kst.month, kst.day);
+            }
+            d.setDate(d.getDate() + delta);
+            const pad = n => String(n).padStart(2, '0');
+            const newVal = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            document.getElementById('add-sub-duedate').value = newVal;
+            document.getElementById('add-sub-duedate-text').value = newVal;
         }
 
         function setAddSubColor(color, btnEl) {
@@ -1321,19 +1468,28 @@
         }
 
         function deleteSubject(id) {
-            if (!confirm("이 공부 계획을 삭제하시겠습니까?")) return;
-            
-            // If deleting the active timer task, stop timer first
-            if (activeTimerTaskId === id && timerRunning) {
-                toggleStopwatch(id);
+            // Show custom delete confirmation modal instead of browser confirm()
+            const modal = document.getElementById('delete-confirm-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.getElementById('delete-confirm-btn').onclick = () => {
+                    modal.classList.add('hidden');
+                    // If deleting the active timer task, stop timer first
+                    if (activeTimerTaskId === id && timerRunning) {
+                        toggleStopwatch(id);
+                    }
+                    tasks = tasks.filter(t => t.id !== id);
+                    notifications = notifications.filter(n => !n.key.startsWith(`alert_${id}_`));
+                    saveAllData();
+                    renderPlanner();
+                    renderTimeTable();
+                    renderNotifications();
+                    showCozyBubble("계획이 삭제되었습니다. 🗑️");
+                };
+                document.getElementById('delete-cancel-btn').onclick = () => {
+                    modal.classList.add('hidden');
+                };
             }
-            
-            tasks = tasks.filter(t => t.id !== id);
-            notifications = notifications.filter(n => !n.key.startsWith(`alert_${id}_`));
-            saveAllData();
-            renderPlanner();
-            renderTimeTable();
-            renderNotifications();
         }
 
         function setTaskCheck(id, status) {
@@ -1386,7 +1542,7 @@
                             }
                             
                             // Update global total time display
-                            const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
+                            const dayTasks = getVisibleTasksForDate(currentPlannerDate);
                             const globalSeconds = dayTasks.reduce((sum, t) => sum + t.timeSeconds, 0);
                             document.getElementById('global-timer-display').innerText = formatTimerString(globalSeconds);
                         }
@@ -1404,7 +1560,7 @@
                             timerEl.innerText = formatTimerString(activeTask.timeSeconds);
                         }
                         
-                        const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
+                        const dayTasks = getVisibleTasksForDate(currentPlannerDate);
                         const globalSeconds = dayTasks.reduce((sum, t) => sum + t.timeSeconds, 0);
                         document.getElementById('global-timer-display').innerText = formatTimerString(globalSeconds);
                     }
@@ -1425,7 +1581,7 @@
             saveAllData();
             renderPlanner();
             
-            const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
+            const dayTasks = getVisibleTasksForDate(currentPlannerDate);
             const globalSeconds = dayTasks.reduce((sum, t) => sum + t.timeSeconds, 0);
             document.getElementById('global-timer-display').innerText = formatTimerString(globalSeconds);
         }
@@ -1460,7 +1616,10 @@
                 if (savedSettings) settings = JSON.parse(savedSettings);
 
                 const savedTasks = localStorage.getItem('woolini_tasks');
-                if (savedTasks) tasks = JSON.parse(savedTasks);
+                if (savedTasks) {
+                    tasks = JSON.parse(savedTasks);
+                    checkAutoPostponeIncompleteTasks();
+                }
 
                 const savedNotes = localStorage.getItem('woolini_calendar_notes');
                 if (savedNotes) calendarNotes = JSON.parse(savedNotes);
@@ -2319,6 +2478,14 @@
         function renderPlanner() {
             const labelEl = document.getElementById('planner-date-label');
             if (labelEl) labelEl.innerText = currentPlannerDate.replace(/-/g, '.');
+            const todayBadge = document.getElementById('planner-today-badge');
+            if (todayBadge) {
+                if (currentPlannerDate === todayStr) {
+                    todayBadge.classList.remove('hidden');
+                } else {
+                    todayBadge.classList.add('hidden');
+                }
+            }
 
             const listContainer = document.getElementById('subject-cards-list');
             listContainer.innerHTML = '';
@@ -2461,7 +2628,7 @@
         // --- TIMETABLE GRID DRAWER ---
 
         function getTaskColorForCell(hour, part) {
-            const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
+            const dayTasks = getVisibleTasksForDate(currentPlannerDate);
             const cellMinutes = hour * 60 + part * 10;
 
             for (const task of dayTasks) {
@@ -2486,7 +2653,7 @@
             const isTextOn = document.getElementById('toggle-timetable-text').checked;
             const isColorOn = document.getElementById('toggle-timetable-color').checked;
 
-            const dayTasks = tasks.filter(t => t.date === currentPlannerDate);
+            const dayTasks = getVisibleTasksForDate(currentPlannerDate);
 
             scroller.onmousedown = () => { isDrawing = true; };
             window.onmouseup = () => { isDrawing = false; };
@@ -2661,7 +2828,7 @@
                 const dateKey = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const hasNote = calendarNotes[dateKey];
                 const mood = calendarMoods[dateKey];
-                const dayTasks = tasks.filter(t => t.date === dateKey);
+                const dayTasks = getVisibleTasksForDate(dateKey);
 
                 let cellClass = 'aspect-square flex flex-col items-center justify-center text-[10px] font-bold rounded-lg transition-all active:scale-90 relative ';
                 
@@ -2693,7 +2860,7 @@
 
                 cell.innerHTML = `
                     <span>${day}</span>
-                    ${emoji ? `<span class="text-[8px] absolute bottom-0.5">${emoji}</span>` : (dotsHtml ? dotsHtml : (hasNote ? `<span class="w-1.5 h-0.5 bg-primary absolute bottom-1"></span>` : ''))}
+                    ${isToday ? `<span class="text-[7px] font-bold block leading-none mt-0.5 opacity-90">오늘</span>` : (emoji ? `<span class="text-[8px] absolute bottom-0.5">${emoji}</span>` : (dotsHtml ? dotsHtml : (hasNote ? `<span class="w-1.5 h-0.5 bg-primary absolute bottom-1"></span>` : '')))}
                 `;
 
                 cell.onclick = () => selectCalendarDay(day);
@@ -2728,7 +2895,7 @@
             const displayEl = document.getElementById('calendar-notes-display');
             const note = calendarNotes[dateKey];
             const mood = calendarMoods[dateKey];
-            const dayTasks = tasks.filter(t => t.date === dateKey);
+            const dayTasks = getVisibleTasksForDate(dateKey);
 
             let moodStr = '';
             if (mood === 'happy') moodStr = ' 😊 (기쁨)';
