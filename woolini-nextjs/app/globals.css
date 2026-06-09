@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* ── Fonts ── */
+* {
+  font-family: var(--font-noto), 'Plus Jakarta Sans', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+h1, h2, h3, h4, h5, h6, .font-headline {
+  font-family: var(--font-jakarta), var(--font-noto), sans-serif !important;
+}
+
+/* ── Phone frame ── */
+.phone-container {
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 10px #171717;
+}
+
+/* ── Scrollbars ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
+
+/* ── Animations ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.floating-mate { animation: float 3s ease-in-out infinite; }
+
+/* ── Bubbly effects ── */
+.bubbly-shadow { box-shadow: 0 8px 24px rgba(53, 103, 97, 0.06); }
+.bubbly-button {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 0 #1b4e4a;
+  transition: all 0.1s ease;
+}
+.bubbly-button:active {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 0 0 #1b4e4a;
+  transform: translateY(2px);
+}
+
+/* ── Timetable ── */
+.timetable-cell-active {
+  border-color: rgba(255,255,255,0.2) !important;
+}
+
+/* ── Dark mode overrides ── */
+html.dark #app-screen { background-color: #07090a !important; color: #cbd5e1 !important; }
+html.dark header { background-color: rgba(7,9,10,0.8) !important; border-bottom-color: rgba(255,255,255,0.08) !important; }
+html.dark nav { background-color: #07090a !important; border-top-color: rgba(255,255,255,0.08) !important; }
+html.dark .bg-surface-container-low { background-color: #0c0f10 !important; }
+html.dark .bg-surface-container-high { background-color: #12181a !important; }
+html.dark .bg-surface-container-lowest { background-color: #07090a !important; }
+html.dark .text-on-surface { color: #f1f5f9 !important; }
+html.dark h1, html.dark h2, html.dark h3,
+html.dark h4, html.dark h5, html.dark h6 { color: #f1f5f9 !important; }
+html.dark .timetable-grid-cell { background-color: #07090a !important; }
+html.dark .modal-card { background-color: #0c0f10 !important; border-color: rgba(255,255,255,0.12) !important; }
+html.dark .modal-card input,
+html.dark .modal-card textarea { background-color: #07090a !important; color: #f1f5f9 !important; border-color: rgba(255,255,255,0.12) !important; }
+
+/* ── Material Symbols ── */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 400;
+  display: inline-block;
+  line-height: 1;
+  vertical-align: middle;
+}
