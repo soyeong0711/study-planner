@@ -6,9 +6,14 @@ function getAIClient(customApiKey?: string | null) {
 }
 
 export interface DifficultyResponse {
-  difficulty: "매우 쉬움" | "쉬움" | "보통" | "어려움" | "매우 어려움";
-  expReward: number;
-  estimatedTime: number;
+  difficulty: string;
+  difficultyScore: number;
+}
+
+export interface MemoryIntentResponse {
+  shouldSave: boolean;
+  category?: string;
+  content?: string;
 }
 
 export async function estimateTaskDifficulty(title: string, customApiKey?: string | null): Promise<DifficultyResponse> {
@@ -16,9 +21,8 @@ export async function estimateTaskDifficulty(title: string, customApiKey?: strin
   if (!apiKey || apiKey === "placeholder_key") {
     // Return mock data if API key is not configured
     return {
-      difficulty: "보통",
-      expReward: 40,
-      estimatedTime: 45,
+      difficulty: "medium",
+      difficultyScore: 50,
     };
   }
 
@@ -27,32 +31,82 @@ export async function estimateTaskDifficulty(title: string, customApiKey?: strin
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: `사용자가 등록한 공부 할 일 제목: "${title}"
-이 할 일의 난이도를 분석해주세요.
-난이도 체계:
-- 매우 쉬움 (경험치: 10 XP, 예상 시간: 15분)
-- 쉬움 (경험치: 20 XP, 예상 시간: 30분)
-- 보통 (경험치: 40 XP, 예상 시간: 45분)
-- 어려움 (경험치: 70 XP, 예상 시간: 60분)
-- 매우 어려움 (경험치: 120 XP, 예상 시간: 120분)
+이 할 일의 난이도를 다음 5가지 기준을 바탕으로 분석해주세요:
+1. 예상 소요 시간
+2. 집중도
+3. 복잡성
+4. 수행 난이도
+5. 긴급성
+
+분석 결과를 바탕으로 전반적인 난이도(difficulty)와 0~100 사이의 난이도 점수(difficultyScore)를 평가해주세요.
 
 다음 JSON 형식으로만 정확히 반환해주세요. 다른 설명이나 마크다운 백틱은 포함하지 마십시오:
 {
-  "difficulty": "매우 쉬움" | "쉬움" | "보통" | "어려움" | "매우 어려움",
-  "expReward": 10 | 20 | 40 | 70 | 120,
-  "estimatedTime": number
+  "difficulty": "hard",
+  "difficultyScore": 85
 }`,
     });
 
     const text = response.text || "";
-    const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    return JSON.parse(cleanedText) as DifficultyResponse;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      let diff = (parsed.difficulty || "medium").toLowerCase().trim();
+      if (diff.includes("easy") || diff.includes("쉬움") || diff.includes("쉬")) {
+        diff = "easy";
+      } else if (diff.includes("hard") || diff.includes("difficult") || diff.includes("어려움") || diff.includes("어렵")) {
+        diff = "hard";
+      } else {
+        diff = "medium";
+      }
+      return {
+        difficulty: diff,
+        difficultyScore: Number(parsed.difficultyScore) || 50,
+      };
+    }
+    throw new Error("No JSON object found in Gemini response");
   } catch (error) {
     console.error("Gemini Error:", error);
     return {
-      difficulty: "보통",
-      expReward: 40,
-      estimatedTime: 45,
+      difficulty: "medium",
+      difficultyScore: 50,
     };
+  }
+}
+
+export async function analyzeUserMemoryIntent(message: string, customApiKey?: string | null): Promise<MemoryIntentResponse> {
+  const apiKey = customApiKey || process.env.GEMINI_API_KEY || "placeholder_key";
+  if (!apiKey || apiKey === "placeholder_key") {
+    return { shouldSave: false };
+  }
+
+  try {
+    const ai = getAIClient(customApiKey);
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `사용자 메시지를 분석하여, 사용자가 자신의 정보(일과, 공부 습관, 운동 루틴, 목표, 선호 학습 방식, 집중 시간대 등)를 기억하거나 저장해달라고 명시적으로 요청했는지 판단하세요.
+(예: "내 평일 일정 기억해줘", "이 루틴 저장해줘", "내 공부 습관 기억해줘" 등)
+단순한 대화나 질문이라면 저장하지 않습니다.
+
+저장이 필요하다면 카테고리(category)와 내용(content)을 추출하세요. 카테고리는 영어로 짧게 작성하세요 (예: schedule, habit, routine, goal, style, focus_time 등).
+
+반드시 다음 JSON 형식으로만 반환하고 마크다운 백틱은 포함하지 마십시오:
+{
+  "shouldSave": true 또는 false,
+  "category": "추출된 카테고리 (shouldSave가 true일 때만)",
+  "content": "저장할 실제 내용 요약 (shouldSave가 true일 때만)"
+}`,
+    });
+
+    const text = response.text || "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]) as MemoryIntentResponse;
+    }
+    return { shouldSave: false };
+  } catch (error) {
+    console.error("Gemini Intent Error:", error);
+    return { shouldSave: false };
   }
 }
 
@@ -155,8 +209,11 @@ export async function generateAutoStudyPlan(input: {
     });
 
     const text = response.text || "";
-    const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    return JSON.parse(cleanedText);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return { plans: [] };
   } catch (error) {
     console.error("Gemini Auto Plan Error:", error);
     return { plans: [] };
