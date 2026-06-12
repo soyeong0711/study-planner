@@ -125,42 +125,42 @@ h1, h2, h3, h4, h5, h6, .font-headline {
 html.dark #app-screen,
 html.dark #nav-drawer,
 html.dark #login-gateway {
-  background-color: #07090a !important;
+  background-color: #121314 !important;
   color: #cbd5e1 !important;
 }
 html.dark header {
-  background-color: rgba(7, 9, 10, 0.8) !important;
-  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(18, 19, 20, 0.8) !important;
+  border-bottom-color: #2d3134 !important;
 }
 html.dark nav {
-  background-color: #07090a !important;
-  border-top-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #121314 !important;
+  border-top-color: #2d3134 !important;
 }
 html.dark #planner-weekly-calendar {
-  background-color: #0c0f10 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #1a1c1e !important;
+  border-color: #2d3134 !important;
 }
 html.dark #planner-weekly-calendar button:not(.bg-primary) {
-  background-color: #07090a !important;
-  border-color: rgba(255, 255, 255, 0.04) !important;
+  background-color: #121314 !important;
+  border-color: #25282a !important;
   color: #94a3b8 !important;
 }
 html.dark #subject-cards-list > div,
 html.dark #concepts-list > div,
 html.dark #wrong-answers-list > div {
-  background-color: #0c0f10 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #1a1c1e !important;
+  border-color: #2d3134 !important;
 }
 html.dark #view-planner .col-span-7 {
-  background-color: #0c0f10 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #1a1c1e !important;
+  border-color: #2d3134 !important;
 }
 html.dark #timetable-grid {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #2d3134 !important;
 }
 html.dark .timetable-grid-cell:not(.timetable-cell-active) {
-  background-color: #07090a !important;
-  border-right-color: rgba(255, 255, 255, 0.04) !important;
+  background-color: #121314 !important;
+  border-right-color: #25282a !important;
 }
 html.dark .timetable-grid-cell:hover {
   background-color: rgba(255, 255, 255, 0.04) !important;
@@ -168,11 +168,11 @@ html.dark .timetable-grid-cell:hover {
 html.dark #view-notes .bg-surface-container-lowest,
 html.dark #view-character .bg-surface-container-lowest,
 html.dark #view-calendar .bg-surface-container-lowest {
-  background-color: #0c0f10 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #1a1c1e !important;
+  border-color: #2d3134 !important;
 }
 html.dark #calendar-days-container button:not(.bg-primary):not(.bg-primary\/20) {
-  background-color: #07090a !important;
+  background-color: #121314 !important;
   color: #cbd5e1 !important;
 }
 html.dark #calendar-days-container div {
@@ -182,16 +182,16 @@ html.dark #calendar-days-container div {
 html.dark div[id$="-modal"] > div,
 html.dark #calendar-note-modal > div,
 html.dark #profile-dropdown {
-  background-color: #0c0f10 !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: #1a1c1e !important;
+  border-color: #383c3e !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
 }
 html.dark div[id$="-modal"] input,
 html.dark div[id$="-modal"] textarea,
 html.dark div[id$="-modal"] select,
 html.dark #calendar-note-modal textarea {
-  background-color: #07090a !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: #121314 !important;
+  border-color: #383c3e !important;
   color: #f1f5f9 !important;
 }
 html.dark .text-on-surface {
@@ -211,16 +211,16 @@ html.dark .bg-surface-container-low,
 html.dark .bg-surface-container-low\/40,
 html.dark .bg-surface-container-low\/60,
 html.dark .bg-surface-container-low\/80 {
-  background-color: #0c0f10 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #1a1c1e !important;
+  border-color: #2d3134 !important;
 }
 html.dark .bg-surface-container-high {
-  background-color: #12181a !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #222527 !important;
+  border-color: #2d3134 !important;
 }
 html.dark .bg-surface-container-lowest {
-  background-color: #07090a !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #121314 !important;
+  border-color: #2d3134 !important;
 }
 
 /* Theme sharp card corner option override */

@@ -1,10 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { Task, PALETTE_COLORS } from '@/lib/types';
-import { formatTimerString, getDDayString } from '@/lib/utils';
+import { formatTimerString, getDDayString, parseLocalDate } from '@/lib/utils';
 import { getKSTDateString, getKSTDate, addDaysToDateStr } from '@/lib/utils';
+
+const handleWrapChange = (valStr: string, maxVal: number, setter: (v: string) => void) => {
+  if (valStr === "") {
+    setter("");
+    return;
+  }
+  const val = parseInt(valStr, 10);
+  if (isNaN(val)) return;
+
+  if (val < 0) {
+    setter(String(maxVal));
+  } else if (val > maxVal) {
+    setter("0");
+  } else {
+    setter(valStr);
+  }
+};
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -108,20 +125,20 @@ export function AddTaskModal({ isOpen, onClose, editTask }: AddTaskModalProps) {
             <div>
               <label className="block font-bold text-gray-600 mb-1">시작 시각</label>
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
-                <input type="number" value={shour} onChange={e => setShour(e.target.value)} min={0} max={23} placeholder="09"
+                <input type="number" value={shour} onChange={e => handleWrapChange(e.target.value, 23, setShour)} placeholder="09"
                   className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0" />
                 <span className="text-[10px] text-gray-400">:</span>
-                <input type="number" value={smin} onChange={e => setSmin(e.target.value)} min={0} max={59} placeholder="00"
+                <input type="number" value={smin} onChange={e => handleWrapChange(e.target.value, 59, setSmin)} placeholder="00"
                   className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0" />
               </div>
             </div>
             <div>
               <label className="block font-bold text-gray-600 mb-1">예상 소요 시간</label>
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
-                <input type="number" value={dhour} onChange={e => setDhour(e.target.value)} min={0} max={12} placeholder="2"
+                <input type="number" value={dhour} onChange={e => handleWrapChange(e.target.value, 12, setDhour)} placeholder="2"
                   className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0" />
                 <span className="text-[9px] text-gray-400">h</span>
-                <input type="number" value={dmin} onChange={e => setDmin(e.target.value)} min={0} max={59} placeholder="30"
+                <input type="number" value={dmin} onChange={e => handleWrapChange(e.target.value, 59, setDmin)} placeholder="30"
                   className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0" />
                 <span className="text-[9px] text-gray-400">m</span>
               </div>
@@ -218,14 +235,57 @@ interface TaskCardProps {
 
 export function TaskCard({ task, isDue, onEdit, onDelete }: TaskCardProps) {
   const { tasks, setTasks, activeTimerTaskId, setActiveTimerTaskId, timerRunning, setTimerRunning, todayStr, addXP } = useStore();
+  const postponeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const setCompleted = (val: Task['completed']) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id !== task.id) return t;
-      const wasO = t.completed === 'o';
-      if (val === 'o' && !wasO) addXP(50);
-      return { ...t, completed: val };
-    }));
+    const nextStatus = task.completed === val ? '' : val;
+
+    if (postponeTimeoutRef.current) {
+      clearTimeout(postponeTimeoutRef.current);
+      postponeTimeoutRef.current = null;
+    }
+
+    setTasks(prev => {
+      const updated = prev.map(t => {
+        if (t.id !== task.id) return t;
+        const wasO = t.completed === 'o';
+        if (nextStatus === 'o' && !wasO) addXP(50);
+        return { ...t, completed: nextStatus };
+      });
+
+      if (nextStatus === 'triangle' || nextStatus === 'x') {
+        postponeTimeoutRef.current = setTimeout(() => {
+          setTasks(currentTasks => {
+            const currDate = parseLocalDate(task.date);
+            currDate.setDate(currDate.getDate() + 1);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            const nextDateStr = `${currDate.getFullYear()}-${pad(currDate.getMonth() + 1)}-${pad(currDate.getDate())}`;
+
+            const alreadyCopied = currentTasks.some(t => t.title === task.title && t.date === nextDateStr);
+            if (!alreadyCopied) {
+              const newTask: Task = {
+                ...task,
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                date: nextDateStr,
+                completed: '',
+                timeSeconds: 0,
+              };
+              return [...currentTasks, newTask];
+            }
+            return currentTasks;
+          });
+          postponeTimeoutRef.current = null;
+        }, 600);
+      } else {
+        const currDate = parseLocalDate(task.date);
+        currDate.setDate(currDate.getDate() + 1);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const nextDateStr = `${currDate.getFullYear()}-${pad(currDate.getMonth() + 1)}-${pad(currDate.getDate())}`;
+        return updated.filter(t => !(t.title === task.title && t.date === nextDateStr));
+      }
+
+      return updated;
+    });
   };
 
   const toggleTimer = () => {
@@ -260,15 +320,14 @@ export function TaskCard({ task, isDue, onEdit, onDelete }: TaskCardProps) {
         <div className="flex items-center gap-2 overflow-hidden w-full">
           <input type="checkbox" checked={isO} onChange={e => setCompleted(e.target.checked ? 'o' : '')}
             className="w-3.5 h-3.5 rounded shrink-0 cursor-pointer accent-[#356761]" />
-          <div className="overflow-hidden">
+          <div className="overflow-hidden flex-1 min-w-0">
             <h4 className={`text-xs font-bold text-gray-800 truncate flex items-center ${isO ? 'line-through opacity-50' : ''}`}>
               {isDue && <span className="inline-block text-[7px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold mr-1 shrink-0">오늘 마감</span>}
               <span className="truncate">{task.title}</span>
             </h4>
             {task.description && <p className={`text-[9px] text-gray-500 truncate ${isO ? 'opacity-50' : ''}`}>{task.description}</p>}
             {task.dueDate && (
-              <div className="flex items-center gap-1 text-[8px] font-bold text-red-500/80 mt-1">
-                <span className="material-symbols-outlined text-[10px]">alarm</span>
+              <div className="flex items-center gap-1 text-[8px] font-bold text-red-500/80 mt-1 flex-wrap">
                 <span>마감일: {task.dueDate} {ddayStr ? `(${ddayStr})` : ''}</span>
               </div>
             )}

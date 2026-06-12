@@ -44,18 +44,27 @@ function TimeTableGrid() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [showText, setShowText] = useState(true);
 
-  // Get task color for a cell
   const getTaskColor = (hour: number, part: number): string | null => {
     const dayTasks = tasks.filter(t => t.date === currentPlannerDate || t.dueDate === currentPlannerDate);
+    const cellStart = hour * 60 + part * 10;
+    const cellEnd = cellStart + 10;
+
     for (const task of dayTasks) {
       if (!task.startTime || !task.duration) continue;
       const [sh, sm] = task.startTime.split(':').map(Number);
       const startMinute = sh * 60 + sm;
       const durationMin = parseDurationMinutes(task.duration);
       const endMinute = startMinute + durationMin;
-      const cellStart = hour * 60 + part * 10;
-      const cellEnd = cellStart + 10;
+
+      // Normal overlap
       if (cellStart < endMinute && cellEnd > startMinute) return task.color;
+
+      // Midnight wrap-around check (1440 minutes)
+      if (endMinute > 1440) {
+        const wrappedStart = 0;
+        const wrappedEnd = endMinute - 1440;
+        if (cellStart < wrappedEnd && cellEnd > wrappedStart) return task.color;
+      }
     }
     return null;
   };
@@ -148,7 +157,20 @@ export default function PlannerTab() {
 
   const handleDelete = (id: number) => setDeleteId(id);
   const confirmDelete = () => {
-    if (deleteId !== null) setTasks(prev => prev.filter(t => t.id !== deleteId));
+    if (deleteId !== null) {
+      setTasks(prev => {
+        const task = prev.find(t => t.id === deleteId);
+        const filtered = prev.filter(t => t.id !== deleteId);
+        if (task) {
+          const currDate = parseLocalDate(task.date);
+          currDate.setDate(currDate.getDate() + 1);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const nextDateStr = `${currDate.getFullYear()}-${pad(currDate.getMonth() + 1)}-${pad(currDate.getDate())}`;
+          return filtered.filter(t => !(t.title === task.title && t.date === nextDateStr));
+        }
+        return filtered;
+      });
+    }
     setDeleteId(null);
   };
 

@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/AppContext";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 interface UserRecord {
   email: string;
@@ -31,7 +32,6 @@ export default function LoginPage() {
   const [regPassword, setRegPassword] = useState("");
   const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
   const [regGoalHours, setRegGoalHours] = useState("");
-  const [regAvatarUrl, setRegAvatarUrl] = useState("");
 
   // Social login loader state
   const [socialLoading, setSocialLoading] = useState(false);
@@ -47,38 +47,33 @@ export default function LoginPage() {
     }
   }, []);
 
-  const saveUserDb = (db: UserRecord[]) => {
-    setUserDb(db);
-    localStorage.setItem("sp_user_db", JSON.stringify(db));
-  };
-
-  const handleLocalLoginSubmit = () => {
+  const handleLocalLoginSubmit = async () => {
     if (!loginEmail.trim() || !loginPassword.trim()) {
       alert("이메일과 비밀번호를 입력해주세요.");
       return;
     }
 
-    const matchedUser = userDb.find(
-      (u) => u.email === loginEmail.trim() && u.password === loginPassword.trim()
-    );
+    try {
+      const result = await signIn("credentials", {
+        email: loginEmail.trim(),
+        password: loginPassword.trim(),
+        redirect: false,
+      });
 
-    if (!matchedUser) {
-      alert("이메일 혹은 비밀번호가 일치하지 않습니다.");
-      return;
+      if (result?.error) {
+        alert(result.error);
+        return;
+      }
+
+      setIsLoggedIn(true);
+      router.push("/planner");
+    } catch (err) {
+      console.error(err);
+      alert("로그인 중 오류가 발생했습니다.");
     }
-
-    // Sync settings
-    updateSettings({
-      username: matchedUser.username,
-      avatarUrl: matchedUser.avatarUrl,
-      goalHours: matchedUser.goalHours,
-    });
-
-    setIsLoggedIn(true);
-    router.push("/planner");
   };
 
-  const handleLocalRegisterSubmit = () => {
+  const handleLocalRegisterSubmit = async () => {
     if (!regEmail.trim() || !regUsername.trim() || !regPassword.trim()) {
       alert("이메일, 이름, 비밀번호는 필수 입력 사항입니다.");
       return;
@@ -89,72 +84,101 @@ export default function LoginPage() {
       return;
     }
 
-    const duplicate = userDb.find((u) => u.email === regEmail.trim());
-    if (duplicate) {
-      alert("이미 가입된 이메일 주소입니다.");
-      return;
-    }
+    const parseGoalHoursToMinutes = (str: string): number => {
+      let h = 0, m = 0;
+      const hMatch = str.match(/(\d+)\s*시간/);
+      const mMatch = str.match(/(\d+)\s*분/);
+      if (hMatch) h = parseInt(hMatch[1]);
+      if (mMatch) m = parseInt(mMatch[1]);
+      if (h === 0 && m === 0) {
+        const num = parseInt(str);
+        if (!isNaN(num)) return num;
+        return 270; // 4h 30m default
+      }
+      return h * 60 + m;
+    };
 
-    const newDb: UserRecord[] = [
-      ...userDb,
-      {
-        email: regEmail.trim(),
-        username: regUsername.trim(),
-        password: regPassword.trim(),
-        goalHours: regGoalHours.trim() || "4시간 30분",
-        avatarUrl: regAvatarUrl.trim() || "https://img.icons8.com/color/150/user.png",
-      },
-    ];
-
-    saveUserDb(newDb);
-    alert("회원가입이 완료되었습니다. 방금 생성하신 이메일과 비밀번호로 로그인해주세요.");
-
-    // Reset inputs
-    setRegEmail("");
-    setRegUsername("");
-    setRegPassword("");
-    setRegPasswordConfirm("");
-    setRegGoalHours("");
-    setRegAvatarUrl("");
-
-    setFormMode("login");
-  };
-
-  const handleSocialLogin = (provider: "kakao" | "naver" | "google") => {
-    let dummyName = "";
-    let dummyAvatar = "";
-    let dummyGoal = "";
-
-    if (provider === "kakao") {
-      setSocialLoadingText("카카오톡 인증 서버 연동 중...");
-      dummyName = "카카오 프렌즈";
-      dummyAvatar = "https://img.icons8.com/color/150/kakaotalk.png";
-      dummyGoal = "3시간 30분";
-    } else if (provider === "naver") {
-      setSocialLoadingText("네이버 로그인 계정 연동 중...");
-      dummyName = "네이버 탐험가";
-      dummyAvatar = "https://img.icons8.com/color/150/naver.png";
-      dummyGoal = "4시간 00분";
-    } else if (provider === "google") {
-      setSocialLoadingText("구글 보안 토큰 연동 중...");
-      dummyName = "구글 스튜던트";
-      dummyAvatar = "https://img.icons8.com/color/150/google-logo.png";
-      dummyGoal = "5시간 00분";
-    }
-
-    setSocialLoading(true);
-
-    setTimeout(() => {
-      updateSettings({
-        username: dummyName,
-        avatarUrl: dummyAvatar,
-        goalHours: dummyGoal,
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: regEmail.trim(),
+          name: regUsername.trim(),
+          password: regPassword.trim(),
+          goalTime: parseGoalHoursToMinutes(regGoalHours.trim() || "4시간 30분"),
+        }),
       });
 
-      setSocialLoading(false);
-      setIsLoggedIn(true);
-      router.push("/planner");
-    }, 1200);
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "회원가입에 실패했습니다.");
+        return;
+      }
+
+      alert("회원가입이 완료되었습니다. 방금 생성하신 이메일과 비밀번호로 로그인해주세요.");
+
+      // Reset inputs
+      setRegEmail("");
+      setRegUsername("");
+      setRegPassword("");
+      setRegPasswordConfirm("");
+      setRegGoalHours("");
+
+      setFormMode("login");
+    } catch (err) {
+      console.error(err);
+      alert("네트워크 오류로 회원가입에 실패했습니다.");
+    }
+  };
+
+  const handleSocialLogin = async (provider: "kakao" | "naver" | "google") => {
+    try {
+      const providersRes = await fetch("/api/auth/providers");
+      const providers = await providersRes.json();
+      
+      if (providers && providers[provider]) {
+        // Real provider is configured in NextAuth!
+        signIn(provider, { callbackUrl: "/planner" });
+      } else {
+        // Real provider not configured -> Fallback to mock simulation
+        setSocialLoading(true);
+        setSocialLoadingText(`${provider === "google" ? "Google" : provider === "naver" ? "Naver" : "Kakao"} 계정으로 간편 로그인 연동 중...`);
+        
+        const mockEmail = `mock_${provider}@studyplanner.com`;
+        const mockName = `${provider === "google" ? "구글" : provider === "naver" ? "네이버" : "카카오"} 사용자`;
+        
+        // 1. Call register endpoint to ensure user exists
+        await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: mockEmail,
+            name: mockName,
+            password: "mock_social_password_123",
+            goalTime: 270,
+          }),
+        });
+
+        // 2. Perform credentials login
+        const result = await signIn("credentials", {
+          email: mockEmail,
+          password: "mock_social_password_123",
+          redirect: false,
+        });
+
+        setSocialLoading(false);
+        if (result?.error) {
+          alert(result.error);
+        } else {
+          setIsLoggedIn(true);
+          router.push("/planner");
+        }
+      }
+    } catch (e) {
+      console.error("Social login error:", e);
+      signIn(provider, { callbackUrl: "/planner" }); // fallback attempt
+    }
   };
 
   return (
@@ -290,18 +314,6 @@ export default function LoginPage() {
                   value={regGoalHours}
                   onChange={(e) => setRegGoalHours(e.target.value)}
                   placeholder="예: 4시간 30분"
-                  className="w-full bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-primary text-on-surface"
-                />
-              </div>
-              <div>
-                <label className="block text-[9px] font-bold text-on-surface-variant mb-0.5">
-                  프로필 이미지 URL (선택)
-                </label>
-                <input
-                  type="text"
-                  value={regAvatarUrl}
-                  onChange={(e) => setRegAvatarUrl(e.target.value)}
-                  placeholder="주소를 입력하세요"
                   className="w-full bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-primary text-on-surface"
                 />
               </div>

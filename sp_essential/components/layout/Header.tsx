@@ -96,40 +96,57 @@ export default function Header({
 
           {/* Notification Dropdown Menu */}
           {isNotifOpen && (
-            <div className="absolute right-0 top-11 w-60 bg-surface dark:bg-[#0c0f10] border border-surface-variant/30 rounded-2xl shadow-xl py-3 z-[90] text-[10px] flex flex-col max-h-64">
-              <div className="px-3 pb-2 border-b border-surface-variant/20 flex justify-between items-center font-bold">
-                <span className="text-primary text-[11px]">알림 센터</span>
+            <div className="absolute right-0 top-11 w-64 bg-surface dark:bg-[#1a202c] border border-surface-variant/30 rounded-2xl shadow-xl py-3.5 z-[90] text-[10px] flex flex-col max-h-64 bubbly-shadow">
+              <div className="px-3.5 pb-2 border-b border-surface-variant/20 flex justify-between items-center font-bold">
+                <span className="text-primary text-[11px] tracking-wide">알림 센터</span>
                 <button
                   onClick={handleClearAllNotif}
-                  className="text-[9px] text-error hover:underline"
+                  className="text-[9px] text-error hover:underline cursor-pointer"
                 >
                   전체 삭제
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-1 space-y-1.5 mt-1.5">
+              <div className="flex-1 overflow-y-auto custom-scrollbar px-2.5 py-1.5 space-y-1.5 mt-2">
                 {notifications.length === 0 ? (
-                  <div className="text-center text-on-surface-variant/60 py-4">
+                  <div className="text-center text-on-surface-variant/50 py-6 italic select-none">
                     알림이 없습니다.
                   </div>
                 ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => handleNotifClick(n.id)}
-                      className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                        n.read
-                          ? "border-surface-variant/10 bg-surface-container-low/30 text-on-surface-variant/70"
-                          : "border-primary/20 bg-primary/5 text-on-surface font-bold"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="leading-snug break-all">{n.text}</span>
-                        <span className="text-[7px] text-on-surface-variant/50 shrink-0">
-                          {n.date}
-                        </span>
+                  notifications.map((n) => {
+                    const isToday = n.text.includes("오늘");
+                    const isLevelUp = n.text.includes("레벨");
+                    const cleanText = n.text.replace("📢 ", "").replace("🎉 ", "");
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotifClick(n.id)}
+                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex gap-2 items-start ${
+                          n.read
+                            ? "border-surface-variant/10 bg-surface-container-low/20 text-on-surface-variant/60"
+                            : "border-primary/15 bg-primary/5 text-on-surface"
+                        }`}
+                      >
+                        {/* Status Dot */}
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
+                          n.read
+                            ? "bg-on-surface-variant/30"
+                            : isLevelUp
+                            ? "bg-amber-500"
+                            : isToday
+                            ? "bg-error animate-pulse"
+                            : "bg-primary"
+                        }`} />
+                        <div className="flex-1 space-y-0.5 min-w-0">
+                          <p className={`text-[10px] leading-snug break-all ${n.read ? "font-normal" : "font-semibold"}`}>
+                            {cleanText}
+                          </p>
+                          <span className="text-[7px] text-on-surface-variant/40 block">
+                            {n.date}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

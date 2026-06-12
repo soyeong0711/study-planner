@@ -42,7 +42,7 @@ export async function PATCH(req: Request) {
   const userId = (session.user as any).id;
 
   try {
-    const { name, imageUrl } = await req.json();
+    const { name, imageUrl, level, exp } = await req.json();
 
     const character = await prisma.character.findUnique({
       where: { userId },
@@ -57,6 +57,8 @@ export async function PATCH(req: Request) {
       data: {
         name: name !== undefined ? name : character.name,
         imageUrl: imageUrl !== undefined ? imageUrl : character.imageUrl,
+        level: level !== undefined ? Number(level) : character.level,
+        exp: exp !== undefined ? Number(exp) : character.exp,
       },
     });
 

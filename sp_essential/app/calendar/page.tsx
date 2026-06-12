@@ -9,10 +9,10 @@ export default function CalendarPage() {
   const {
     tasks,
     calendarNotes,
-    setCalendarNotes,
     calendarMoods,
-    setCalendarMoods,
     currentPlannerDate,
+    saveCalendarDay,
+    deleteCalendarDay,
   } = useApp();
 
   const now = new Date();
@@ -109,41 +109,13 @@ export default function CalendarPage() {
 
   const handleSaveNote = () => {
     if (!selectedDateKey) return;
-    setCalendarNotes((prev) => {
-      const copy = { ...prev };
-      if (noteInput.trim()) {
-        copy[selectedDateKey] = noteInput.trim();
-      } else {
-        delete copy[selectedDateKey];
-      }
-      return copy;
-    });
-
-    setCalendarMoods((prev) => {
-      const copy = { ...prev };
-      if (selectedMood) {
-        copy[selectedDateKey] = selectedMood;
-      } else {
-        delete copy[selectedDateKey];
-      }
-      return copy;
-    });
-
+    saveCalendarDay(selectedDateKey, noteInput.trim(), selectedMood);
     setIsModalOpen(false);
   };
 
   const handleDeleteNote = () => {
     if (!selectedDateKey) return;
-    setCalendarNotes((prev) => {
-      const copy = { ...prev };
-      delete copy[selectedDateKey];
-      return copy;
-    });
-    setCalendarMoods((prev) => {
-      const copy = { ...prev };
-      delete copy[selectedDateKey];
-      return copy;
-    });
+    deleteCalendarDay(selectedDateKey);
     setIsModalOpen(false);
   };
 
@@ -190,7 +162,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Days Grid Container */}
-      <div className="bg-surface-container-lowest dark:bg-[#0c0f10] rounded-2xl p-2.5 border border-surface-variant/20 bubbly-shadow shrink-0">
+      <div className="bg-surface-container-lowest dark:bg-[#1a202c] rounded-2xl p-2.5 border border-surface-variant/20 bubbly-shadow shrink-0">
         <div className="grid grid-cols-7 mb-1.5 text-center text-[9px] font-bold text-on-surface-variant/60">
           <div className="text-error">일</div>
           <div>월</div>
@@ -272,7 +244,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Selected Day Memo & Tasks */}
-      <div className="flex-1 bg-surface-container-low/60 dark:bg-[#0c0f10] rounded-2xl p-3.5 border border-surface-variant/20 flex flex-col gap-1.5 min-h-[120px] overflow-y-auto no-scrollbar pb-16">
+      <div className="flex-1 bg-surface-container-low/60 dark:bg-[#1a202c] rounded-2xl p-3.5 border border-surface-variant/20 flex flex-col gap-1.5 min-h-[120px] overflow-y-auto no-scrollbar pb-16">
         <h4 className="text-[11px] font-bold text-primary flex items-center gap-1 shrink-0">
           <span className="material-symbols-outlined text-[15px]">edit_note</span>
           <span>
@@ -357,7 +329,7 @@ export default function CalendarPage() {
       {/* CALENDAR PLAN NOTE EDIT MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-surface dark:bg-[#0c0f10] rounded-3xl max-w-[340px] w-full p-5 bubbly-shadow border border-surface-variant/20 scale-100 transition-transform">
+          <div className="bg-surface dark:bg-[#1a202c] rounded-3xl max-w-[340px] w-full p-5 bubbly-shadow border border-surface-variant/20 scale-100 transition-transform">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="font-headline font-bold text-base text-primary">일반 계획 기록</h3>

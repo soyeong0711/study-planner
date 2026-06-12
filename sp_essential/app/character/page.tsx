@@ -19,7 +19,7 @@ interface ChatMessage {
 }
 
 export default function CharacterPage() {
-  const { settings, updateSettings, addXP, mascotLevel, mascotXP } = useApp();
+  const { settings, updateSettings, addXP, mascotLevel, mascotXP, updateCharacter } = useApp();
 
   const [customUrlInput, setCustomUrlInput] = useState(
     settings.customMascotUrl || ""
@@ -104,7 +104,7 @@ export default function CharacterPage() {
     setChatMessages((prev) => [...prev, newMsg]);
   };
 
-  const handleSendChat = () => {
+  const handleSendChat = async () => {
     const text = chatInput.trim();
     if (!text) return;
 
@@ -116,26 +116,74 @@ export default function CharacterPage() {
     setChatMessages((prev) => [...prev, userMsg]);
     setChatInput("");
 
-    // Simulated AI responses
-    setTimeout(() => {
+    const history = chatMessages.map((msg) => ({
+      role: (msg.sender === "user" ? "user" : "model") as "user" | "model",
+      parts: [msg.text],
+    }));
+
+    const typingId = Date.now() + 1;
+    try {
+      const typingMsg: ChatMessage = {
+        id: typingId,
+        sender: "mascot",
+        text: "생각 중... 🐉",
+      };
+      setChatMessages((prev) => [...prev, typingMsg]);
+
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history }),
+      });
+
+      const data = await res.json();
+      
+      setChatMessages((prev) =>
+        prev.filter((msg) => msg.id !== typingId)
+      );
+
+      if (res.ok && data.reply) {
+        const aiMsg: ChatMessage = {
+          id: Date.now() + 2,
+          sender: "mascot",
+          text: data.reply,
+        };
+        setChatMessages((prev) => [...prev, aiMsg]);
+        playStudyBell();
+      } else {
+        const answers: Record<string, string> = {
+          woolini: "멋진 질문이에요! 계획을 단계별로 쪼개어 실천하면, 수학 복습도 훨씬 쉬워질 거예요! 🐉",
+          "yang-i": "학습 집중도가 상승하고 있어요. 10분 단위로 리프레시하며 오답노트를 적극 작성해봐요! 🐑",
+          "gom-i": "차근차근 실력을 쌓아가는 모습이 듬직합니다. 오늘 공부 시간 목표도 곰곰이 지켜볼게요. 🐻",
+          custom: "정말 현명한 생각입니다. 지속 가능한 실천을 위해 1분 단위 상세 계획을 지켜봐요! ✨",
+        };
+        const aiMsg: ChatMessage = {
+          id: Date.now() + 2,
+          sender: "mascot",
+          text: data.error || answers[activeMascot] || answers.woolini,
+        };
+        setChatMessages((prev) => [...prev, aiMsg]);
+        playStudyBell();
+      }
+    } catch (e) {
+      console.error(e);
+      setChatMessages((prev) =>
+        prev.filter((msg) => msg.id !== typingId)
+      );
       const answers: Record<string, string> = {
-        woolini:
-          "멋진 질문이에요! 계획을 단계별로 쪼개어 실천하면, 수학 복습도 훨씬 쉬워질 거예요! 🐉",
-        "yang-i":
-          "학습 집중도가 상승하고 있어요. 10분 단위로 리프레시하며 오답노트를 적극 작성해봐요! 🐑",
-        "gom-i":
-          "차근차근 실력을 쌓아가는 모습이 듬직합니다. 오늘 공부 시간 목표도 곰곰이 지켜볼게요. 🐻",
-        custom:
-          "정말 현명한 생각입니다. 지속 가능한 실천을 위해 1분 단위 상세 계획을 지켜봐요! ✨",
+        woolini: "멋진 질문이에요! 계획을 단계별로 쪼개어 실천하면, 수학 복습도 훨씬 쉬워질 거예요! 🐉",
+        "yang-i": "학습 집중도가 상승하고 있어요. 10분 단위로 리프레시하며 오답노트를 적극 작성해봐요! 🐑",
+        "gom-i": "차근차근 실력을 쌓아가는 모습이 듬직합니다. 오늘 공부 시간 목표도 곰곰이 지켜볼게요. 🐻",
+        custom: "정말 현명한 생각입니다. 지속 가능한 실천을 위해 1분 단위 상세 계획을 지켜봐요! ✨",
       };
       const aiMsg: ChatMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + 2,
         sender: "mascot",
         text: answers[activeMascot] || answers.woolini,
       };
       setChatMessages((prev) => [...prev, aiMsg]);
       playStudyBell();
-    }, 650);
+    }
   };
 
   // Auto-scroll to bottom of chat
@@ -146,13 +194,20 @@ export default function CharacterPage() {
   }, [chatMessages]);
 
   const handleSelectMascot = (key: string) => {
-    updateSettings({ activeMascot: key as any });
     const nameMap: Record<string, string> = {
       woolini: "울리니",
       "yang-i": "양양이",
       "gom-i": "곰곰이",
       custom: "커스텀",
     };
+    
+    let imageUrl = "";
+    if (key === "yang-i") imageUrl = MASCOT_IMAGES["yang-i"];
+    else if (key === "gom-i") imageUrl = MASCOT_IMAGES["gom-i"];
+    else if (key === "custom") imageUrl = settings.customMascotUrl || "";
+
+    updateCharacter(key as any, nameMap[key] || key, imageUrl);
+
     const newMsg: ChatMessage = {
       id: Date.now(),
       sender: "mascot",
@@ -162,14 +217,12 @@ export default function CharacterPage() {
   };
 
   const handleSaveCustomImage = () => {
-    if (!customUrlInput.trim()) {
+    const url = customUrlInput.trim();
+    if (!url) {
       alert("이미지 주소를 입력하세요.");
       return;
     }
-    updateSettings({
-      customMascotUrl: customUrlInput.trim(),
-      activeMascot: "custom",
-    });
+    updateCharacter("custom", "커스텀", url);
     const newMsg: ChatMessage = {
       id: Date.now(),
       sender: "mascot",
@@ -186,7 +239,7 @@ export default function CharacterPage() {
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        updateSettings({ customMascotUrl: dataUrl, activeMascot: "custom" });
+        updateCharacter("custom", "커스텀", dataUrl);
         setCustomUrlInput(dataUrl);
         const newMsg: ChatMessage = {
           id: Date.now(),

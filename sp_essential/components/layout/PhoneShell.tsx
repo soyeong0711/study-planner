@@ -8,9 +8,10 @@ import Header from "./Header";
 import BottomNav from "./BottomNav";
 import NavDrawer from "./NavDrawer";
 import { useRouter, usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 export default function PhoneShell({ children }: { children: React.ReactNode }) {
-  const { isLoggedIn, setIsLoggedIn, settings, updateSettings } = useApp();
+  const { isLoggedIn, setIsLoggedIn, settings, updateSettings, updateUserProfile } = useApp();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -21,7 +22,7 @@ export default function PhoneShell({ children }: { children: React.ReactNode }) 
   // Edit MyPage fields state
   const [editUsername, setEditUsername] = useState("");
   const [editGoal, setEditGoal] = useState("");
-  const [editAvatar, setEditAvatar] = useState("");
+  const [editApiKey, setEditApiKey] = useState("");
 
   // Update android status bar clock
   useEffect(() => {
@@ -46,14 +47,16 @@ export default function PhoneShell({ children }: { children: React.ReactNode }) 
   }, [isLoggedIn, pathname, router]);
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    router.push("/");
+    signOut({ redirect: false }).then(() => {
+      setIsLoggedIn(false);
+      router.push("/");
+    });
   };
 
   const handleOpenMyPage = () => {
     setEditUsername(settings.username);
     setEditGoal(settings.goalHours);
-    setEditAvatar(settings.customMascotUrl || settings.avatarUrl);
+    setEditApiKey(settings.geminiApiKey || "");
     setIsMyPageOpen(true);
   };
 
@@ -62,11 +65,33 @@ export default function PhoneShell({ children }: { children: React.ReactNode }) 
       alert("사용자 이름을 입력해주세요.");
       return;
     }
-    updateSettings({
-      username: editUsername,
-      goalHours: editGoal,
-      avatarUrl: editAvatar,
-    });
+    
+    // Parse editGoal (e.g. "4시간 30분") to minutes
+    const parseGoalTimeToMinutes = (str: string): number => {
+      const hourMatch = str.match(/(\d+)\s*시간/);
+      const minMatch = str.match(/(\d+)\s*분/);
+      let totalMinutes = 0;
+      if (hourMatch) {
+        totalMinutes += parseInt(hourMatch[1]) * 60;
+      }
+      if (minMatch) {
+        totalMinutes += parseInt(minMatch[1]);
+      }
+      if (totalMinutes === 0) {
+        const directNumber = parseInt(str);
+        if (!isNaN(directNumber)) {
+          if (directNumber < 24) {
+            totalMinutes = directNumber * 60;
+          } else {
+            totalMinutes = directNumber;
+          }
+        }
+      }
+      return totalMinutes || 120; // fallback to 2 hours
+    };
+
+    const goalTimeMinutes = parseGoalTimeToMinutes(editGoal);
+    updateUserProfile(editUsername, goalTimeMinutes, undefined, editApiKey);
     setIsMyPageOpen(false);
   };
 
@@ -130,7 +155,7 @@ export default function PhoneShell({ children }: { children: React.ReactNode }) 
       {/* MYPAGE EDIT MODAL DIALOG */}
       {isMyPageOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-surface dark:bg-[#0c0f10] rounded-3xl max-w-[340px] w-full p-5 bubbly-shadow border border-surface-variant/20 scale-100 transition-transform">
+          <div className="bg-surface dark:bg-[#1a202c] rounded-3xl max-w-[340px] w-full p-5 bubbly-shadow border border-surface-variant/20 scale-100 transition-transform">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="font-headline font-bold text-base text-primary">마이페이지 편집</h3>
@@ -166,12 +191,12 @@ export default function PhoneShell({ children }: { children: React.ReactNode }) 
                 />
               </div>
               <div>
-                <label className="block font-bold text-on-surface-variant mb-1">프로필 이미지 URL</label>
+                <label className="block font-bold text-on-surface-variant mb-1">Gemini AI API Key</label>
                 <input
-                  type="text"
-                  value={editAvatar}
-                  onChange={(e) => setEditAvatar(e.target.value)}
-                  placeholder="주소를 입력하세요"
+                  type="password"
+                  value={editApiKey}
+                  onChange={(e) => setEditApiKey(e.target.value)}
+                  placeholder="AI API Key 입력 (공백 시 기본 키 사용)"
                   className="w-full bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-2 focus:outline-none focus:border-primary text-on-surface"
                 />
               </div>

@@ -43,15 +43,16 @@ export async function PATCH(req: Request) {
   const userId = (session.user as any).id;
 
   try {
-    const { name, goalTime } = await req.json();
+    const { name, goalTime, image } = await req.json();
 
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         ...(name !== undefined && { name }),
         ...(goalTime !== undefined && { goalTime: Number(goalTime) }),
+        ...(image !== undefined && { image }),
       },
-      select: { id: true, name: true, email: true, goalTime: true },
+      select: { id: true, name: true, email: true, image: true, goalTime: true },
     });
 
     return NextResponse.json(updated);

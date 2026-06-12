@@ -3,14 +3,15 @@
 
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 export interface Task {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
   timeSeconds: number;
   color: string;
-  completed: "o" | "x" | "triangle";
+  completed: "o" | "x" | "triangle" | "none";
   startTime: string | null;
   duration: string; // e.g. "2시간 30분"
   date: string; // YYYY-MM-DD
@@ -44,6 +45,7 @@ export interface AppSettings {
   soundEnabled: boolean;
   customMascotUrl: string;
   deadlineAlertsEnabled: boolean;
+  geminiApiKey: string;
 }
 
 interface AppContextType {
@@ -74,11 +76,21 @@ interface AppContextType {
   setCurrentActiveTab: (tab: string) => void;
   currentPlannerDate: string;
   setCurrentPlannerDate: (date: string) => void;
+  createTask: (title: string, description: string, startTime: string | null, duration: string, dueDate: string | null, color: string, date?: string) => Promise<void>;
+  updateTask: (id: string | number, updates: { title: string; description: string; startTime: string | null; duration: string; dueDate: string | null; color: string; }) => Promise<void>;
+  deleteTask: (id: string | number) => Promise<void>;
+  toggleTaskStatus: (id: string | number, status: "o" | "triangle" | "x") => Promise<void>;
+  updateTaskTime: (id: string | number, studyTimeMinutes: number) => Promise<void>;
+  saveCalendarDay: (dateKey: string, note: string, mood: string) => Promise<void>;
+  deleteCalendarDay: (dateKey: string) => Promise<void>;
+  updateCharacter: (mascotKey: "woolini" | "yang-i" | "gom-i" | "custom", name: string, imageUrl: string) => Promise<void>;
+  updateUserProfile: (name: string, goalTimeMinutes: number, avatarUrl?: string, geminiApiKey?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { data: session, status } = useSession();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentActiveTab, setCurrentActiveTab] = useState("planner");
   const [currentPlannerDate, setCurrentPlannerDate] = useState("");
@@ -94,11 +106,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     soundEnabled: true,
     customMascotUrl: "",
     deadlineAlertsEnabled: true,
+    geminiApiKey: "",
   });
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [calendarNotes, setCalendarNotes] = useState<Record<string, string>>({});
   const [calendarMoods, setCalendarMoods] = useState<Record<string, string>>({});
+  const [calendarEventIds, setCalendarEventIds] = useState<Record<string, string>>({});
   const [timetableDrawings, setTimetableDrawings] = useState<Record<string, string>>({});
   const [concepts, setConcepts] = useState<Record<string, Concept[]>>({});
   const [wrongAnswers, setWrongAnswers] = useState<Record<string, WrongAnswer[]>>({});
@@ -114,9 +128,129 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentPlannerDate(dateStr);
   }, []);
 
-  // Load from localStorage on mount
+  // Fetch DB state when logged in via NextAuth
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (status !== "authenticated" || !session?.user) {
+      return;
+    }
+
+    setIsLoggedIn(true);
+
+    const fetchAllData = async () => {
+      try {
+        // 1. Fetch user profile
+        const profileRes = await fetch("/api/user/profile");
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          const goalMin = profile.goalTime || 120;
+          const goalHoursStr = `${Math.floor(goalMin / 60)}시간 ${goalMin % 60}분`;
+          
+          let userApiKey = "";
+          try {
+            const keyRes = await fetch("/api/user/gemini-key");
+            if (keyRes.ok) {
+              const keyData = await keyRes.json();
+              userApiKey = keyData.geminiApiKey || "";
+            }
+          } catch (keyErr) {
+            console.error("Failed to load Gemini API key:", keyErr);
+          }
+
+          setSettings((prev) => ({
+            ...prev,
+            username: profile.name || prev.username,
+            avatarUrl: profile.image || prev.avatarUrl,
+            goalHours: goalHoursStr,
+            geminiApiKey: userApiKey,
+          }));
+        }
+
+        // 2. Fetch active character
+        const charRes = await fetch("/api/character");
+        if (charRes.ok) {
+          const char = await charRes.json();
+          setMascotLevel(char.level || 1);
+          setMascotXP(char.exp || 0);
+          
+          let activeMascot: "woolini" | "yang-i" | "gom-i" | "custom" = "woolini";
+          if (char.name === "양양이") activeMascot = "yang-i";
+          else if (char.name === "곰곰이") activeMascot = "gom-i";
+          else if (char.imageUrl) activeMascot = "custom";
+
+          setSettings((prev) => ({
+            ...prev,
+            activeMascot,
+            customMascotUrl: char.imageUrl || "",
+          }));
+        }
+
+        // 3. Fetch tasks
+        const tasksRes = await fetch("/api/tasks");
+        if (tasksRes.ok) {
+          const dbTasks = await tasksRes.json();
+          const mappedTasks: Task[] = dbTasks.map((t: any) => {
+            const scheduled = t.scheduledAt ? new Date(t.scheduledAt) : null;
+            let startTimeStr = null;
+            let dateStr = currentPlannerDate;
+            if (scheduled) {
+              const pad = (n: number) => String(n).padStart(2, "0");
+              dateStr = `${scheduled.getFullYear()}-${pad(scheduled.getMonth() + 1)}-${pad(scheduled.getDate())}`;
+              startTimeStr = `${pad(scheduled.getHours())}:${pad(scheduled.getMinutes())}`;
+            }
+
+            const statusMap: Record<string, "o" | "triangle" | "x" | "none"> = {
+              DONE: "o",
+              PARTIAL: "triangle",
+              FAILED: "x",
+              TODO: "none",
+            };
+
+            return {
+              id: t.id,
+              title: t.title,
+              description: t.description || "",
+              timeSeconds: (t.studyTime || 0) * 60,
+              color: t.color || "#a5d8d1",
+              completed: statusMap[t.status] || "none",
+              startTime: startTimeStr,
+              duration: t.duration || "0시간 0분",
+              date: dateStr,
+              dueDate: t.dueDate ? t.dueDate.split("T")[0] : null,
+            };
+          });
+          setTasks(mappedTasks);
+        }
+
+        // 4. Fetch calendar events
+        const eventsRes = await fetch("/api/events");
+        if (eventsRes.ok) {
+          const dbEvents = await eventsRes.json();
+          const notesMap: Record<string, string> = {};
+          const moodsMap: Record<string, string> = {};
+          const idsMap: Record<string, string> = {};
+
+          dbEvents.forEach((ev: any) => {
+            const dateKey = ev.date.split("T")[0];
+            notesMap[dateKey] = ev.title || "";
+            moodsMap[dateKey] = ev.color || "";
+            idsMap[dateKey] = ev.id;
+          });
+
+          setCalendarNotes(notesMap);
+          setCalendarMoods(moodsMap);
+          setCalendarEventIds(idsMap);
+        }
+      } catch (e) {
+        console.error("Failed to load DB data in AppContext:", e);
+      }
+    };
+
+    fetchAllData();
+  }, [status, session]);
+
+  // Load from localStorage on mount (for non-authenticated mode fallback)
+  useEffect(() => {
+    if (typeof window === "undefined" || status === "authenticated") return;
 
     try {
       const storedSettings = localStorage.getItem("sp_settings");
@@ -154,28 +288,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.error("Failed to load local storage data", e);
     }
-  }, []);
+  }, [status]);
 
-  // Save data to localStorage on changes
+  // Save data to localStorage on changes (fallback)
   useEffect(() => {
     if (typeof window === "undefined" || !currentPlannerDate) return;
     localStorage.setItem("sp_settings", JSON.stringify(settings));
   }, [settings, currentPlannerDate]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !currentPlannerDate) return;
+    if (typeof window === "undefined" || !currentPlannerDate || status === "authenticated") return;
     localStorage.setItem("sp_tasks", JSON.stringify(tasks));
-  }, [tasks, currentPlannerDate]);
+  }, [tasks, currentPlannerDate, status]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !currentPlannerDate) return;
+    if (typeof window === "undefined" || !currentPlannerDate || status === "authenticated") return;
     localStorage.setItem("sp_calendarNotes", JSON.stringify(calendarNotes));
-  }, [calendarNotes, currentPlannerDate]);
+  }, [calendarNotes, currentPlannerDate, status]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !currentPlannerDate) return;
+    if (typeof window === "undefined" || !currentPlannerDate || status === "authenticated") return;
     localStorage.setItem("sp_calendarMoods", JSON.stringify(calendarMoods));
-  }, [calendarMoods, currentPlannerDate]);
+  }, [calendarMoods, currentPlannerDate, status]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !currentPlannerDate) return;
@@ -193,14 +327,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [wrongAnswers, currentPlannerDate]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !currentPlannerDate) return;
+    if (typeof window === "undefined" || !currentPlannerDate || status === "authenticated") return;
     localStorage.setItem("sp_mascotLevel", mascotLevel.toString());
-  }, [mascotLevel, currentPlannerDate]);
+  }, [mascotLevel, currentPlannerDate, status]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !currentPlannerDate) return;
+    if (typeof window === "undefined" || !currentPlannerDate || status === "authenticated") return;
     localStorage.setItem("sp_mascotXP", mascotXP.toString());
-  }, [mascotXP, currentPlannerDate]);
+  }, [mascotXP, currentPlannerDate, status]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !currentPlannerDate) return;
@@ -252,7 +386,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       while (newXP >= 1000) {
         newXP -= 1000;
         newLevel += 1;
-        // Trigger level up alert sound or bubble
         if (typeof window !== "undefined" && settings.soundEnabled) {
           try {
             const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -285,9 +418,306 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
           ...prev,
         ]);
+        if (isLoggedIn) {
+          fetch("/api/character", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ level: newLevel, exp: newXP }),
+          }).catch(console.error);
+        }
+      } else {
+        if (isLoggedIn) {
+          fetch("/api/character", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ exp: newXP }),
+          }).catch(console.error);
+        }
       }
       return newXP;
     });
+  };
+
+  // Real Database Syncing Helper Methods
+  const createTask = async (
+    title: string,
+    description: string,
+    startTime: string | null,
+    duration: string,
+    dueDate: string | null,
+    color: string,
+    date?: string
+  ) => {
+    const targetDate = date || currentPlannerDate;
+    const tempId = Date.now();
+    const newTask: Task = {
+      id: tempId,
+      title,
+      description,
+      timeSeconds: 0,
+      color,
+      completed: "none",
+      startTime,
+      duration,
+      date: targetDate,
+      dueDate,
+    };
+
+    setTasks((prev) => [...prev, newTask]);
+    addXP(15);
+
+    if (isLoggedIn) {
+      try {
+        let scheduledAt = null;
+        if (startTime) {
+          scheduledAt = new Date(`${targetDate}T${startTime}:00`);
+        }
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, scheduledAt }),
+        });
+        const savedTask = await res.json();
+        if (res.ok && savedTask.id) {
+          setTasks((prev) =>
+            prev.map((t) => (t.id === tempId ? { ...t, id: savedTask.id } : t))
+          );
+        }
+      } catch (e) {
+        console.error("Failed to save task to DB", e);
+      }
+    }
+  };
+
+  const updateTask = async (
+    id: number | string,
+    updates: {
+      title: string;
+      description: string;
+      startTime: string | null;
+      duration: string;
+      dueDate: string | null;
+      color: string;
+    }
+  ) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
+
+    if (isLoggedIn && typeof id === "string") {
+      try {
+        let scheduledAt = null;
+        if (updates.startTime) {
+          scheduledAt = new Date(`${currentPlannerDate}T${updates.startTime}:00`);
+        }
+        await fetch(`/api/tasks/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: updates.title,
+            scheduledAt,
+          }),
+        });
+      } catch (e) {
+        console.error("Failed to update task in DB", e);
+      }
+    }
+  };
+
+  const deleteTask = async (id: number | string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+
+    if (isLoggedIn && typeof id === "string") {
+      try {
+        await fetch(`/api/tasks/${id}`, {
+          method: "DELETE",
+        });
+      } catch (e) {
+        console.error("Failed to delete task from DB", e);
+      }
+    }
+  };
+
+  const toggleTaskStatus = async (
+    id: number | string,
+    status: "o" | "triangle" | "x" | "none"
+  ) => {
+    let xpAwarded = 0;
+    let finalNextStatus: "o" | "triangle" | "x" | "none" = "none";
+
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === id) {
+          const nextStatus = t.completed === status ? "none" : status;
+          finalNextStatus = nextStatus;
+          if (nextStatus === "o") {
+            xpAwarded = 50;
+          }
+          return { ...t, completed: nextStatus };
+        }
+        return t;
+      })
+    );
+
+    if (xpAwarded > 0) {
+      addXP(xpAwarded);
+    }
+
+    if (isLoggedIn && typeof id === "string") {
+      try {
+        const dbStatusMap = {
+          o: "DONE",
+          triangle: "PARTIAL",
+          x: "FAILED",
+          none: "TODO",
+        };
+        const dbStatus = dbStatusMap[finalNextStatus];
+        await fetch(`/api/tasks/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: dbStatus }),
+        });
+      } catch (e) {
+        console.error("Failed to toggle task status in DB", e);
+      }
+    }
+  };
+
+  const updateTaskTime = async (id: number | string, studyTimeMinutes: number) => {
+    if (isLoggedIn && typeof id === "string") {
+      try {
+        await fetch(`/api/tasks/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studyTime: studyTimeMinutes }),
+        });
+      } catch (e) {
+        console.error("Failed to update task time in DB", e);
+      }
+    }
+  };
+
+  const saveCalendarDay = async (dateKey: string, note: string, mood: string) => {
+    setCalendarNotes((prev) => ({ ...prev, [dateKey]: note }));
+    setCalendarMoods((prev) => ({ ...prev, [dateKey]: mood }));
+
+    if (isLoggedIn) {
+      try {
+        const existingEventId = calendarEventIds[dateKey];
+        if (existingEventId) {
+          if (!note.trim() && !mood) {
+            await deleteCalendarDay(dateKey);
+            return;
+          }
+          await fetch(`/api/events/${existingEventId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: note, color: mood }),
+          });
+        } else {
+          if (!note.trim() && !mood) return;
+          const res = await fetch("/api/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: note, date: dateKey, color: mood }),
+          });
+          const savedEvent = await res.json();
+          if (res.ok && savedEvent.id) {
+            setCalendarEventIds((prev) => ({ ...prev, [dateKey]: savedEvent.id }));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to save calendar event to DB", e);
+      }
+    }
+  };
+
+  const deleteCalendarDay = async (dateKey: string) => {
+    setCalendarNotes((prev) => {
+      const copy = { ...prev };
+      delete copy[dateKey];
+      return copy;
+    });
+    setCalendarMoods((prev) => {
+      const copy = { ...prev };
+      delete copy[dateKey];
+      return copy;
+    });
+
+    if (isLoggedIn) {
+      try {
+        const existingEventId = calendarEventIds[dateKey];
+        if (existingEventId) {
+          await fetch(`/api/events/${existingEventId}`, {
+            method: "DELETE",
+          });
+          setCalendarEventIds((prev) => {
+            const copy = { ...prev };
+            delete copy[dateKey];
+            return copy;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to delete calendar event from DB", e);
+      }
+    }
+  };
+
+  const updateCharacter = async (
+    mascotKey: "woolini" | "yang-i" | "gom-i" | "custom",
+    name: string,
+    imageUrl: string
+  ) => {
+    updateSettings({
+      activeMascot: mascotKey,
+      customMascotUrl: mascotKey === "custom" ? imageUrl : "",
+    });
+
+    if (isLoggedIn) {
+      try {
+        await fetch("/api/character", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, imageUrl: mascotKey === "custom" ? imageUrl : "" }),
+        });
+      } catch (e) {
+        console.error("Failed to update character details in DB", e);
+      }
+    }
+  };
+
+  const updateUserProfile = async (name: string, goalTimeMinutes: number, avatarUrl?: string, geminiApiKey?: string) => {
+    const goalHoursStr = `${Math.floor(goalTimeMinutes / 60)}시간 ${goalTimeMinutes % 60}분`;
+    updateSettings({
+      username: name,
+      goalHours: goalHoursStr,
+      ...(avatarUrl !== undefined && { avatarUrl }),
+      ...(geminiApiKey !== undefined && { geminiApiKey }),
+    });
+
+    if (isLoggedIn) {
+      try {
+        await fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            goalTime: goalTimeMinutes,
+            ...(avatarUrl !== undefined && { image: avatarUrl }),
+          }),
+        });
+
+        if (geminiApiKey !== undefined) {
+          await fetch("/api/user/gemini-key", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ geminiApiKey }),
+          });
+        }
+      } catch (e) {
+        console.error("Failed to update user profile or Gemini key in DB", e);
+      }
+    }
   };
 
   return (
@@ -320,6 +750,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentActiveTab,
         currentPlannerDate,
         setCurrentPlannerDate,
+        createTask,
+        updateTask,
+        deleteTask,
+        toggleTaskStatus,
+        updateTaskTime,
+        saveCalendarDay,
+        deleteCalendarDay,
+        updateCharacter,
+        updateUserProfile,
       }}
     >
       {children}

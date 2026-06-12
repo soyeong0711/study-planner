@@ -6,54 +6,73 @@ import NaverProvider from "next-auth/providers/naver";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 
-export const authOptions: AuthOptions = {
-  providers: [
+const providers = [];
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  );
+}
+
+if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
+  providers.push(
     KakaoProvider({
-      clientId: process.env.KAKAO_CLIENT_ID || "",
-      clientSecret: process.env.KAKAO_CLIENT_SECRET || "",
-    }),
+      clientId: process.env.KAKAO_CLIENT_ID,
+      clientSecret: process.env.KAKAO_CLIENT_SECRET,
+    })
+  );
+}
+
+if (process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET) {
+  providers.push(
     NaverProvider({
-      clientId: process.env.NAVER_CLIENT_ID || "",
-      clientSecret: process.env.NAVER_CLIENT_SECRET || "",
-    }),
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("이메일과 비밀번호를 입력해주세요.");
-        }
+      clientId: process.env.NAVER_CLIENT_ID,
+      clientSecret: process.env.NAVER_CLIENT_SECRET,
+    })
+  );
+}
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          include: { character: true },
-        });
+providers.push(
+  CredentialsProvider({
+    name: "Credentials",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) {
+        throw new Error("이메일과 비밀번호를 입력해주세요.");
+      }
 
-        if (!user || !user.password) {
-          throw new Error("가입되지 않은 이메일이거나 비밀번호가 다릅니다.");
-        }
+      const user = await prisma.user.findUnique({
+        where: { email: credentials.email },
+        include: { character: true },
+      });
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) {
-          throw new Error("비밀번호가 일치하지 않습니다.");
-        }
+      if (!user || !user.password) {
+        throw new Error("가입되지 않은 이메일이거나 비밀번호가 다릅니다.");
+      }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        };
-      },
-    }),
-  ],
+      const isValid = await bcrypt.compare(credentials.password, user.password);
+      if (!isValid) {
+        throw new Error("비밀번호가 일치하지 않습니다.");
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.image,
+      };
+    },
+  })
+);
+
+export const authOptions: AuthOptions = {
+  providers,
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider !== "credentials" && user.email) {

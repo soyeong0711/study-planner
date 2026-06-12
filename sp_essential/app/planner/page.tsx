@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useApp, Task } from "@/lib/AppContext";
+import { useRouter } from "next/navigation";
 
 const MASCOT_IMAGES = {
   woolini:
@@ -13,6 +14,7 @@ const MASCOT_IMAGES = {
 };
 
 export default function PlannerPage() {
+  const router = useRouter();
   const {
     tasks,
     setTasks,
@@ -23,7 +25,15 @@ export default function PlannerPage() {
     currentPlannerDate,
     setCurrentPlannerDate,
     setNotifications,
+    createTask,
+    updateTask,
+    deleteTask,
+    toggleTaskStatus,
+    updateTaskTime,
   } = useApp();
+
+  // Ref to track and cancel scheduled postpone timeouts
+  const postponeTimeoutsRef = useRef<Record<string | number, NodeJS.Timeout>>({});
 
   // Modal open states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -37,10 +47,10 @@ export default function PlannerPage() {
   const [durationHour, setDurationHour] = useState("");
   const [durationMin, setDurationMin] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [taskColor, setTaskColor] = useState("#a5d8d1");
+  const [taskColor, setTaskColor] = useState("#85b8b1");
 
   // Timer states
-  const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<number | string | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
   // Timetable display options
@@ -99,8 +109,8 @@ export default function PlannerPage() {
             : `${diffDays}일`;
         const notifText =
           diffDays === 0
-            ? `📢 [${task.title}] 마감일이 오늘까지입니다!`
-            : `📢 [${task.title}] 마감일이 ${dayWord} 남았습니다!`;
+            ? `[${task.title}] 마감일이 오늘까지입니다!`
+            : `[${task.title}] 마감일이 ${dayWord} 남았습니다!`;
 
         newNotifications.push({
           id: Date.now() + Math.random(),
@@ -224,17 +234,38 @@ export default function PlannerPage() {
   const remainingCount = allVisibleTasks.length - completedCount;
   const totalSeconds = allVisibleTasks.reduce((sum, t) => sum + t.timeSeconds, 0);
 
+  const handleWrapChange = (valStr: string, maxVal: number, setter: (v: string) => void) => {
+    if (valStr === "") {
+      setter("");
+      return;
+    }
+    const val = parseInt(valStr, 10);
+    if (isNaN(val)) return;
+
+    if (val < 0) {
+      setter(String(maxVal));
+    } else if (val > maxVal) {
+      setter("0");
+    } else {
+      setter(valStr);
+    }
+  };
+
   // Task Handlers
   const openAddTaskModal = () => {
     setEditingTask(null);
     setTaskTitle("");
     setTaskDesc("");
-    setStartHour("");
-    setStartMin("");
+    
+    // Set default starting time to current time
+    const now = new Date();
+    setStartHour(now.getHours().toString().padStart(2, "0"));
+    setStartMin(now.getMinutes().toString().padStart(2, "0"));
+    
     setDurationHour("");
     setDurationMin("");
     setDueDate("");
-    setTaskColor("#a5d8d1");
+    setTaskColor("#85b8b1");
     setIsAddModalOpen(true);
   };
 
@@ -291,66 +322,96 @@ export default function PlannerPage() {
 
     if (editingTask) {
       // Edit
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === editingTask.id
-            ? {
-                ...t,
-                title: taskTitle.trim(),
-                description: taskDesc.trim(),
-                startTime,
-                duration,
-                dueDate: dueDate || null,
-                color: taskColor,
-              }
-            : t
-        )
-      );
-    } else {
-      // Create new
-      const newTask: Task = {
-        id: Date.now(),
+      updateTask(editingTask.id, {
         title: taskTitle.trim(),
         description: taskDesc.trim(),
-        timeSeconds: 0,
-        color: taskColor,
-        completed: "x",
         startTime,
         duration,
-        date: currentPlannerDate,
         dueDate: dueDate || null,
-      };
-      setTasks((prev) => [...prev, newTask]);
-      addXP(15);
+        color: taskColor,
+      });
+    } else {
+      // Create new
+      createTask(
+        taskTitle.trim(),
+        taskDesc.trim(),
+        startTime,
+        duration,
+        dueDate || null,
+        taskColor
+      );
     }
 
     setIsAddModalOpen(false);
   };
 
-  const deleteTask = (id: number) => {
+  const handleTaskDelete = (id: number | string) => {
+    const task = tasks.find((t) => t.id === id);
     if (activeTaskId === id) {
       setIsTimerRunning(false);
       setActiveTaskId(null);
     }
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    deleteTask(id);
+
+    // Cancel any scheduled tomorrow-copy timeout for this task
+    if (postponeTimeoutsRef.current[id]) {
+      clearTimeout(postponeTimeoutsRef.current[id]);
+      delete postponeTimeoutsRef.current[id];
+    }
+
+    if (task) {
+      const currDate = parseLocalDate(task.date);
+      currDate.setDate(currDate.getDate() + 1);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const nextDateStr = `${currDate.getFullYear()}-${pad(
+        currDate.getMonth() + 1
+      )}-${pad(currDate.getDate())}`;
+
+      const nextDayTask = tasks.find(
+        (t) => t.title === task.title && t.date === nextDateStr
+      );
+      if (nextDayTask) {
+        deleteTask(nextDayTask.id);
+      }
+    }
   };
 
-  const setTaskCheck = (id: number, status: "o" | "triangle" | "x") => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const nextStatus = t.completed === status ? "x" : status;
-          if (nextStatus === "o") {
-            addXP(50);
-          } else if (nextStatus === "triangle") {
-            // Postpone copy to next day
-            setTimeout(() => postponeTaskToNextDay(t), 600);
-          }
-          return { ...t, completed: nextStatus };
-        }
-        return t;
-      })
+  const setTaskCheck = (id: number | string, status: "o" | "triangle" | "x") => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    const nextStatus = task.completed === status ? "none" : status;
+    toggleTaskStatus(id, status);
+
+    // Cancel any scheduled tomorrow-copy timeout for this task
+    if (postponeTimeoutsRef.current[id]) {
+      clearTimeout(postponeTimeoutsRef.current[id]);
+      delete postponeTimeoutsRef.current[id];
+    }
+    
+    if (nextStatus === "triangle" || nextStatus === "x") {
+      postponeTimeoutsRef.current[id] = setTimeout(() => {
+        postponeTaskToNextDay(task);
+        delete postponeTimeoutsRef.current[id];
+      }, 600);
+    } else {
+      removePostponedTaskFromNextDay(task);
+    }
+  };
+
+  const removePostponedTaskFromNextDay = (task: Task) => {
+    const currDate = parseLocalDate(task.date);
+    currDate.setDate(currDate.getDate() + 1);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const nextDateStr = `${currDate.getFullYear()}-${pad(
+      currDate.getMonth() + 1
+    )}-${pad(currDate.getDate())}`;
+
+    const nextDayTask = tasks.find(
+      (t) => t.title === task.title && t.date === nextDateStr
     );
+    if (nextDayTask) {
+      deleteTask(nextDayTask.id);
+    }
   };
 
   const postponeTaskToNextDay = (task: Task) => {
@@ -361,41 +422,53 @@ export default function PlannerPage() {
       currDate.getMonth() + 1
     )}-${pad(currDate.getDate())}`;
 
-    setTasks((prev) => {
-      const alreadyCopied = prev.some(
-        (t) => t.title === task.title && t.date === nextDateStr
+    const alreadyCopied = tasks.some(
+      (t) => t.title === task.title && t.date === nextDateStr
+    );
+    if (!alreadyCopied) {
+      createTask(
+        task.title,
+        task.description,
+        task.startTime,
+        task.duration,
+        task.dueDate || null,
+        task.color,
+        nextDateStr
       );
-      if (!alreadyCopied) {
-        const newTask: Task = {
-          ...task,
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          date: nextDateStr,
-          completed: "x",
-          timeSeconds: 0,
-        };
-        return [...prev, newTask];
-      }
-      return prev;
-    });
+    }
     alert("공부 계획이 다음날로 복사되었습니다! ➡️");
   };
 
-  const toggleStopwatch = (id: number) => {
+  const toggleStopwatch = (id: number | string) => {
     if (activeTaskId === id) {
-      setIsTimerRunning(!isTimerRunning);
+      const nextRunning = !isTimerRunning;
+      setIsTimerRunning(nextRunning);
+      if (!nextRunning) {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+          updateTaskTime(id, Math.floor(task.timeSeconds / 60));
+        }
+      }
     } else {
+      if (activeTaskId !== null) {
+        const prevTask = tasks.find(t => t.id === activeTaskId);
+        if (prevTask) {
+          updateTaskTime(activeTaskId, Math.floor(prevTask.timeSeconds / 60));
+        }
+      }
       setActiveTaskId(id);
       setIsTimerRunning(true);
     }
   };
 
-  const resetTaskStopwatch = (id: number) => {
+  const resetTaskStopwatch = (id: number | string) => {
     if (activeTaskId === id) {
       setIsTimerRunning(false);
     }
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, timeSeconds: 0 } : t))
     );
+    updateTaskTime(id, 0);
   };
 
   // Mascot woolini floating interaction
@@ -452,6 +525,14 @@ export default function PlannerPage() {
 
       if (cellMinutes >= startTotalMinutes && cellMinutes < endTotalMinutes) {
         return task.color;
+      }
+
+      // Midnight wrap-around check (1440 minutes)
+      if (endTotalMinutes > 1440) {
+        const wrappedEnd = endTotalMinutes - 1440;
+        if (cellMinutes < wrappedEnd) {
+          return task.color;
+        }
       }
     }
     return null;
@@ -627,7 +708,7 @@ export default function PlannerPage() {
                           onChange={(e) => setTaskCheck(t.id, e.target.checked ? "o" : "x")}
                           className="w-3.5 h-3.5 text-primary bg-surface-container border-outline-variant/60 rounded focus:ring-primary focus:ring-1 shrink-0 cursor-pointer"
                         />
-                        <div className="overflow-hidden">
+                        <div className="overflow-hidden flex-1 min-w-0">
                           <h4
                             className={`text-xs font-bold text-on-surface truncate flex items-center ${
                               isO ? "line-through opacity-50" : ""
@@ -646,8 +727,7 @@ export default function PlannerPage() {
                             </p>
                           )}
                           {t.dueDate && (
-                            <div className="flex items-center gap-1 text-[8px] font-bold text-error/80 mt-1 select-none">
-                              <span className="material-symbols-outlined text-[10px]">alarm</span>
+                            <div className="flex items-center gap-1 text-[8px] font-bold text-error/80 mt-1 select-none flex-wrap">
                               <span>마감일: {t.dueDate}</span>
                             </div>
                           )}
@@ -661,7 +741,7 @@ export default function PlannerPage() {
                           <span className="material-symbols-outlined text-[16px]">edit</span>
                         </button>
                         <button
-                          onClick={() => deleteTask(t.id)}
+                          onClick={() => handleTaskDelete(t.id)}
                           className="text-on-surface-variant/40 hover:text-error transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -692,7 +772,7 @@ export default function PlannerPage() {
 
                     <div className="flex items-center justify-between mt-1 gap-1 w-full">
                       {/* Timer Display */}
-                      <div className="flex-1 flex items-center justify-center gap-0.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-lg py-0.5 px-1 transition-colors min-w-0">
+                      <div className="flex-1 flex items-center justify-center gap-0.5 bg-surface-container-high/30 dark:bg-[#111622] border border-surface-variant/25 rounded-lg py-0.5 px-1 transition-colors min-w-0">
                         <span
                           className={`material-symbols-outlined text-[9px] text-primary shrink-0 ${
                             isTicking ? "animate-pulse" : ""
@@ -705,7 +785,7 @@ export default function PlannerPage() {
                         </span>
                       </div>
                       {/* Timer Controls */}
-                      <div className="flex gap-0.5 bg-surface-container-high/30 dark:bg-[#07090a] border border-surface-variant/25 rounded-lg p-0.5 shrink-0 transition-colors">
+                      <div className="flex gap-0.5 bg-surface-container-high/30 dark:bg-[#111622] border border-surface-variant/25 rounded-lg p-0.5 shrink-0 transition-colors">
                         <button
                           onClick={() => toggleStopwatch(t.id)}
                           className="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center shadow transition-transform active:scale-90 cursor-pointer"
@@ -790,7 +870,13 @@ export default function PlannerPage() {
                     const [sh] = task.startTime.split(":").map(Number);
                     const durationMinutes = parseDurationMinutes(task.duration);
                     const eh = Math.floor((sh * 60 + durationMinutes) / 60);
-                    return hour >= sh && hour <= eh;
+                    
+                    if (hour >= sh && hour <= eh) return true;
+                    if (sh * 60 + durationMinutes > 1440) {
+                      const wrappedEndHour = Math.floor((sh * 60 + durationMinutes - 1440) / 60);
+                      if (hour <= wrappedEndHour) return true;
+                    }
+                    return false;
                   })
                 : [];
 
@@ -802,8 +888,8 @@ export default function PlannerPage() {
                   <div className="flex-1 h-full grid grid-cols-6 gap-px bg-neutral-200 dark:bg-neutral-700 rounded overflow-hidden relative">
                     {/* Render color block overlays from scheduled tasks */}
                     {isColorOn &&
-                      allVisibleTasks.map((task) => {
-                        if (!task.startTime) return null;
+                      allVisibleTasks.flatMap((task) => {
+                        if (!task.startTime) return [];
                         const [sh, sm] = task.startTime.split(":").map(Number);
                         const startTotalMinutes = sh * 60 + sm;
                         const durationMinutes = parseDurationMinutes(task.duration);
@@ -812,6 +898,9 @@ export default function PlannerPage() {
                         const rowStartMin = hour * 60;
                         const rowEndMin = (hour + 1) * 60;
 
+                        const blocks = [];
+
+                        // 1. Normal interval
                         if (endTotalMinutes > rowStartMin && startTotalMinutes < rowEndMin) {
                           const interStartMin = Math.max(startTotalMinutes, rowStartMin);
                           const interEndMin = Math.min(endTotalMinutes, rowEndMin);
@@ -819,9 +908,9 @@ export default function PlannerPage() {
                           const leftPercent = ((interStartMin - rowStartMin) / 60) * 100;
                           const widthPercent = ((interEndMin - interStartMin) / 60) * 100;
 
-                          return (
+                          blocks.push(
                             <div
-                              key={task.id}
+                              key={`${task.id}_normal`}
                               className="absolute top-0 h-full rounded-sm flex items-center justify-center px-1 overflow-hidden pointer-events-none select-none z-10"
                               style={{
                                 left: `${leftPercent}%`,
@@ -838,7 +927,41 @@ export default function PlannerPage() {
                             </div>
                           );
                         }
-                        return null;
+
+                        // 2. Wrapped interval (past midnight)
+                        if (endTotalMinutes > 1440) {
+                          const wrappedStartTotalMinutes = 0;
+                          const wrappedEndTotalMinutes = endTotalMinutes - 1440;
+
+                          if (wrappedEndTotalMinutes > rowStartMin && wrappedStartTotalMinutes < rowEndMin) {
+                            const interStartMin = Math.max(wrappedStartTotalMinutes, rowStartMin);
+                            const interEndMin = Math.min(wrappedEndTotalMinutes, rowEndMin);
+
+                            const leftPercent = ((interStartMin - rowStartMin) / 60) * 100;
+                            const widthPercent = ((interEndMin - interStartMin) / 60) * 100;
+
+                            blocks.push(
+                              <div
+                                key={`${task.id}_wrapped`}
+                                className="absolute top-0 h-full rounded-sm flex items-center justify-center px-1 overflow-hidden pointer-events-none select-none z-10"
+                                style={{
+                                  left: `${leftPercent}%`,
+                                  width: `${widthPercent}%`,
+                                  backgroundColor: task.color,
+                                  opacity: 0.9,
+                                }}
+                              >
+                                {isTextOn && hour === 0 && (
+                                  <span className="text-[8px] text-white font-bold truncate leading-none">
+                                    {task.title}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+                        }
+
+                        return blocks;
                       })}
 
                     {/* Render Interactive Cells */}
@@ -877,7 +1000,7 @@ export default function PlannerPage() {
       <div className="absolute bottom-4 right-4 z-30 select-none">
         <div
           className="relative cursor-pointer"
-          onClick={handlePetFloatingMascot}
+          onClick={() => router.push("/character")}
         >
           <div
             className={`absolute bottom-full right-0 mb-2.5 bg-secondary text-white px-3 py-1.5 rounded-xl rounded-br-none text-[9px] font-bold transition-all duration-300 whitespace-nowrap shadow-md ${
@@ -904,7 +1027,7 @@ export default function PlannerPage() {
       {/* ADD / EDIT SUBJECT MODAL DIALOG */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-surface dark:bg-[#0c0f10] rounded-3xl max-w-[340px] w-full p-5 bubbly-shadow border border-surface-variant/20 scale-100 transition-transform">
+          <div className="bg-surface dark:bg-[#1a202c] rounded-3xl max-w-[340px] w-full p-5 bubbly-shadow border border-surface-variant/20 scale-100 transition-transform">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="font-headline font-bold text-base text-primary">
@@ -957,9 +1080,7 @@ export default function PlannerPage() {
                     <input
                       type="number"
                       value={startHour}
-                      onChange={(e) => setStartHour(e.target.value)}
-                      min="0"
-                      max="23"
+                      onChange={(e) => handleWrapChange(e.target.value, 23, setStartHour)}
                       placeholder="09"
                       className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface"
                     />
@@ -967,9 +1088,7 @@ export default function PlannerPage() {
                     <input
                       type="number"
                       value={startMin}
-                      onChange={(e) => setStartMin(e.target.value)}
-                      min="0"
-                      max="59"
+                      onChange={(e) => handleWrapChange(e.target.value, 59, setStartMin)}
                       placeholder="00"
                       className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface"
                     />
@@ -983,9 +1102,7 @@ export default function PlannerPage() {
                     <input
                       type="number"
                       value={durationHour}
-                      onChange={(e) => setDurationHour(e.target.value)}
-                      min="0"
-                      max="12"
+                      onChange={(e) => handleWrapChange(e.target.value, 12, setDurationHour)}
                       placeholder="2"
                       className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface"
                     />
@@ -993,9 +1110,7 @@ export default function PlannerPage() {
                     <input
                       type="number"
                       value={durationMin}
-                      onChange={(e) => setDurationMin(e.target.value)}
-                      min="0"
-                      max="59"
+                      onChange={(e) => handleWrapChange(e.target.value, 59, setDurationMin)}
                       placeholder="30"
                       className="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface"
                     />
@@ -1022,14 +1137,14 @@ export default function PlannerPage() {
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    "#a5d8d1",
-                    "#e9d9ff",
-                    "#eee3ad",
-                    "#bae6fd",
-                    "#fbcfe8",
-                    "#bbf7d0",
-                    "#fed7aa",
-                    "#e5e7eb",
+                    "#85b8b1", // Muted Mint
+                    "#cab7df", // Muted Lavender
+                    "#cfc48d", // Muted Yellow
+                    "#9ac6dd", // Muted Sky Blue
+                    "#dbafc8", // Muted Pink
+                    "#9cd7b0", // Muted Green
+                    "#deb78a", // Muted Orange
+                    "#c5c7cb", // Muted Gray
                   ].map((color) => (
                     <button
                       key={color}

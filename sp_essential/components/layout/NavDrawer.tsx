@@ -4,6 +4,7 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/lib/AppContext";
+import { useRouter } from "next/navigation";
 
 interface NavDrawerProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function NavDrawer({
   onOpenMyPage,
   onLogout,
 }: NavDrawerProps) {
+  const router = useRouter();
   const { settings, updateSettings, tasks, calendarNotes, calendarMoods, timetableDrawings, concepts, wrongAnswers, setConcepts, setWrongAnswers, setTasks, setCalendarNotes, setCalendarMoods, setTimetableDrawings } = useApp();
   const [isDecorOpen, setIsDecorOpen] = useState(false);
 
@@ -255,6 +257,61 @@ export default function NavDrawer({
               </div>
             </div>
           )}
+
+          {/* Navigation links */}
+          <div className="border-t border-surface-variant/10 my-2 pt-2">
+            <div className="px-4 py-1 text-[9px] font-bold text-on-surface-variant/60 uppercase tracking-wider">
+              화면 이동
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                router.push("/planner");
+              }}
+              className="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-base text-primary">
+                timer
+              </span>
+              <span>플래너</span>
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                router.push("/calendar");
+              }}
+              className="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-base text-primary">
+                calendar_month
+              </span>
+              <span>달력</span>
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                router.push("/notes");
+              }}
+              className="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-base text-primary">
+                description
+              </span>
+              <span>노트</span>
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                router.push("/character");
+              }}
+              className="w-full px-4 py-2.5 rounded-xl hover:bg-primary/10 flex items-center gap-3 text-xs font-bold text-on-surface transition-all active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-base text-primary">
+                smart_toy
+              </span>
+              <span>캐릭터</span>
+            </button>
+          </div>
 
           {/* Data Backup & Restore */}
           <div className="border-t border-surface-variant/10 my-2 pt-2">

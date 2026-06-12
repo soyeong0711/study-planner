@@ -897,17 +897,17 @@
                     <div>
                         <label class="block font-bold text-on-surface-variant mb-1">시작 시각</label>
                         <div class="flex items-center gap-1 bg-surface-container-low border border-outline-variant/60 rounded-xl px-2 py-1">
-                            <input type="number" id="add-sub-shour" min="0" max="23" placeholder="09" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
+                            <input type="number" id="add-sub-shour" oninput="handleTimeInputWrap(this, 23)" placeholder="09" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
                             <span class="text-[10px] text-on-surface-variant">:</span>
-                            <input type="number" id="add-sub-smin" min="0" max="59" placeholder="00" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
+                            <input type="number" id="add-sub-smin" oninput="handleTimeInputWrap(this, 59)" placeholder="00" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
                         </div>
                     </div>
                     <div>
                         <label class="block font-bold text-on-surface-variant mb-1">예상 소요 시간</label>
                         <div class="flex items-center gap-1 bg-surface-container-low border border-outline-variant/60 rounded-xl px-2 py-1">
-                            <input type="number" id="add-sub-dhour" min="0" max="12" placeholder="2" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
+                            <input type="number" id="add-sub-dhour" oninput="handleTimeInputWrap(this, 12)" placeholder="2" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
                             <span class="text-[9px] text-on-surface-variant">h</span>
-                            <input type="number" id="add-sub-dmin" min="0" max="59" placeholder="30" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
+                            <input type="number" id="add-sub-dmin" oninput="handleTimeInputWrap(this, 59)" placeholder="30" class="w-full bg-transparent border-0 p-0 text-center text-xs focus:ring-0 text-on-surface" />
                             <span class="text-[9px] text-on-surface-variant">m</span>
                         </div>
                     </div>
@@ -1158,6 +1158,7 @@
         // User database list for Local Signups
         let userDatabase = [];
         let editingTaskId = null;
+        let postponeTimeouts = {};
 
         // Tasks / Planner Subject List
         let tasks = [
@@ -1478,7 +1479,19 @@
                     if (activeTimerTaskId === id && timerRunning) {
                         toggleStopwatch(id);
                     }
+                    const task = tasks.find(t => t.id === id);
+                    if (postponeTimeouts[id]) {
+                        clearTimeout(postponeTimeouts[id]);
+                        delete postponeTimeouts[id];
+                    }
                     tasks = tasks.filter(t => t.id !== id);
+                    if (task) {
+                        const currDate = parseLocalDate(task.date);
+                        currDate.setDate(currDate.getDate() + 1);
+                        const pad = (n) => String(n).padStart(2, '0');
+                        const nextDateStr = `${currDate.getFullYear()}-${pad(currDate.getMonth() + 1)}-${pad(currDate.getDate())}`;
+                        tasks = tasks.filter(t => !(t.title === task.title && t.date === nextDateStr));
+                    }
                     notifications = notifications.filter(n => !n.key.startsWith(`alert_${id}_`));
                     saveAllData();
                     renderPlanner();
@@ -1492,25 +1505,52 @@
             }
         }
 
+        function removePostponedTaskFromNextDay(task) {
+            const currDate = parseLocalDate(task.date);
+            currDate.setDate(currDate.getDate() + 1);
+            const pad = (n) => String(n).padStart(2, '0');
+            const nextDateStr = `${currDate.getFullYear()}-${pad(currDate.getMonth() + 1)}-${pad(currDate.getDate())}`;
+
+            const nextDayTaskIndex = tasks.findIndex(t => t.title === task.title && t.date === nextDateStr);
+            if (nextDayTaskIndex !== -1) {
+                tasks.splice(nextDayTaskIndex, 1);
+            }
+        }
+
         function setTaskCheck(id, status) {
             const task = tasks.find(t => t.id === id);
             if (task) {
+                let nextStatus = '';
                 // If it is toggled off (already the same status), clear it
                 if (task.completed === status) {
                     task.completed = '';
+                    nextStatus = '';
                 } else {
                     task.completed = status;
+                    nextStatus = status;
                     if (status === 'o') {
                         addXP(50);
-                    } else if (status === 'triangle') {
-                        saveAllData();
-                        renderPlanner();
-                        setTimeout(() => {
-                            postponeTaskToNextDay(id);
-                        }, 600); // 600ms delay to show transition before postponement
-                        return;
                     }
                 }
+
+                // Clear any existing timeout for this task
+                if (postponeTimeouts[id]) {
+                    clearTimeout(postponeTimeouts[id]);
+                    delete postponeTimeouts[id];
+                }
+
+                if (nextStatus === 'triangle' || nextStatus === 'x') {
+                    saveAllData();
+                    renderPlanner();
+                    postponeTimeouts[id] = setTimeout(() => {
+                        postponeTaskToNextDay(id);
+                        delete postponeTimeouts[id];
+                    }, 600); // 600ms delay to show transition before postponement
+                    return;
+                } else {
+                    removePostponedTaskFromNextDay(task);
+                }
+
                 saveAllData();
                 renderPlanner();
             }
@@ -2185,8 +2225,6 @@
                 tasks.push(newTask);
             }
             
-            task.completed = 'triangle';
-            
             saveAllData();
             renderPlanner();
             renderTimeTable();
@@ -2531,8 +2569,7 @@
 
                 const ddayStr = getDDayString(task.dueDate, currentPlannerDate);
                 const dueDateHtml = task.dueDate ? `
-                    <div class="flex items-center gap-1 text-[8px] font-bold text-error/80 mt-1 select-none">
-                        <span class="material-symbols-outlined text-[10px]">alarm</span>
+                    <div class="flex items-center gap-1 text-[8px] font-bold text-error/80 mt-1 select-none flex-wrap">
                         <span>마감일: ${task.dueDate} ${ddayStr ? `(${ddayStr})` : ''}</span>
                     </div>
                 ` : '';
@@ -2543,7 +2580,7 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2 overflow-hidden w-full">
                             <input type="checkbox" onchange="toggleTaskComplete(${task.id}, this.checked)" ${isO ? 'checked' : ''} class="w-3.5 h-3.5 text-primary bg-surface-container border-outline-variant/60 rounded focus:ring-primary focus:ring-1 shrink-0 cursor-pointer" />
-                            <div class="overflow-hidden">
+                            <div class="overflow-hidden flex-1 min-w-0">
                                 <h4 class="text-xs font-bold text-on-surface truncate flex items-center ${isO ? 'line-through opacity-50' : ''}">
                                     ${topBadgeHtml}
                                     <span class="truncate">${escapeHtml(task.title)}</span>
@@ -2642,6 +2679,14 @@
                 if (cellMinutes >= startTotalMinutes && cellMinutes < endTotalMinutes) {
                     return task.color;
                 }
+
+                // Midnight wrap-around check (1440 minutes)
+                if (endTotalMinutes > 1440) {
+                    const wrappedEnd = endTotalMinutes - 1440;
+                    if (cellMinutes < wrappedEnd) {
+                        return task.color;
+                    }
+                }
             }
             return null;
         }
@@ -2723,31 +2768,42 @@
                         const durationMinutes = parseDurationMinutes(task.duration);
                         const endTotalMinutes = startTotalMinutes + durationMinutes;
 
-                        const rowStartMin = hour * 60;
-                        const rowEndMin = (hour + 1) * 60;
+                        // Helper function to draw block overlapping the current hour row
+                        const drawBlock = (startMin, endMin) => {
+                            const rowStartMin = hour * 60;
+                            const rowEndMin = (hour + 1) * 60;
 
-                        if (endTotalMinutes > rowStartMin && startTotalMinutes < rowEndMin) {
-                            const interStartMin = Math.max(startTotalMinutes, rowStartMin);
-                            const interEndMin = Math.min(endTotalMinutes, rowEndMin);
+                            if (endMin > rowStartMin && startMin < rowEndMin) {
+                                const interStartMin = Math.max(startMin, rowStartMin);
+                                const interEndMin = Math.min(endMin, rowEndMin);
 
-                            const leftPercent = ((interStartMin - rowStartMin) / 60) * 100;
-                            const widthPercent = ((interEndMin - interStartMin) / 60) * 100;
+                                const leftPercent = ((interStartMin - rowStartMin) / 60) * 100;
+                                const widthPercent = ((interEndMin - interStartMin) / 60) * 100;
 
-                            const block = document.createElement('div');
-                            block.className = `absolute top-0 h-full rounded-sm flex items-center justify-center px-1 overflow-hidden pointer-events-none select-none z-10`;
-                            block.style.left = `${leftPercent}%`;
-                            block.style.width = `${widthPercent}%`;
-                            block.style.backgroundColor = task.color;
-                            block.style.opacity = '0.9';
+                                const block = document.createElement('div');
+                                block.className = `absolute top-0 h-full rounded-sm flex items-center justify-center px-1 overflow-hidden pointer-events-none select-none z-10`;
+                                block.style.left = `${leftPercent}%`;
+                                block.style.width = `${widthPercent}%`;
+                                block.style.backgroundColor = task.color;
+                                block.style.opacity = '0.9';
 
-                            if (isTextOn) {
-                                const isFirstHourRow = hour === sh;
-                                if (isFirstHourRow) {
-                                    block.innerHTML = `<span class="text-[8px] text-white font-bold truncate leading-none">${escapeHtml(task.title)}</span>`;
+                                if (isTextOn) {
+                                    const isFirstHourRow = (hour === sh) || (endTotalMinutes > 1440 && startMin === 0 && hour === 0);
+                                    if (isFirstHourRow) {
+                                        block.innerHTML = `<span class="text-[8px] text-white font-bold truncate leading-none">${escapeHtml(task.title)}</span>`;
+                                    }
                                 }
-                            }
 
-                            grid.appendChild(block);
+                                grid.appendChild(block);
+                            }
+                        };
+
+                        // 1. Normal part
+                        drawBlock(startTotalMinutes, endTotalMinutes);
+
+                        // 2. Wrapped part (past midnight)
+                        if (endTotalMinutes > 1440) {
+                            drawBlock(0, endTotalMinutes - 1440);
                         }
                     });
                 }
@@ -3650,6 +3706,17 @@
                       .replace(/>/g, '&gt;')
                       .replace(/"/g, '&quot;')
                       .replace(/'/g, '&#039;');
+        }
+
+        function handleTimeInputWrap(inputEl, maxVal) {
+            let val = parseInt(inputEl.value, 10);
+            if (isNaN(val)) return;
+
+            if (val < 0) {
+                inputEl.value = maxVal;
+            } else if (val > maxVal) {
+                inputEl.value = 0;
+            }
         }
 
         // Window Startup Setup
