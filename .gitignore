@@ -30,10 +30,6 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# local db & scratch files
-local_db.json
-scratch_test.js
-
 # env files (can opt-in for committing if needed)
 .env*
 
@@ -43,3 +39,7 @@ scratch_test.js
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local databases
+local_db.json
+

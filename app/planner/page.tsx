@@ -21,7 +21,6 @@ export default function PlannerPage() {
     settings,
     timetableDrawings,
     setTimetableDrawings,
-    addXP,
     currentPlannerDate,
     setCurrentPlannerDate,
     setNotifications,
@@ -60,10 +59,10 @@ export default function PlannerPage() {
   // Drawing states
   const [isDrawing, setIsDrawing] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
+  const [floatingMatePosition, setFloatingMatePosition] = useState({ x: 88, y: 86 });
 
-  // Floating mascot speech bubble state
-  const [speechBubble, setSpeechBubble] = useState("");
-  const [speechBubbleVisible, setSpeechBubbleVisible] = useState(false);
+  const plannerRef = useRef<HTMLDivElement>(null);
+  const floatingMateDragRef = useRef({ dragging: false, moved: false });
 
   // Setup interval for active stopwatch timer
   useEffect(() => {
@@ -133,19 +132,73 @@ export default function PlannerPage() {
     }
   }, [currentPlannerDate, tasks, setNotifications]);
 
-  // Stop stopwatch on mouseUp globally
+  // Stop drawing on mouseUp / touchend globally
   useEffect(() => {
-    const handleMouseUp = () => {
+    const handleRelease = () => {
       setIsDrawing(false);
     };
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => window.removeEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mouseup", handleRelease);
+    window.addEventListener("touchend", handleRelease);
+    return () => {
+      window.removeEventListener("mouseup", handleRelease);
+      window.removeEventListener("touchend", handleRelease);
+    };
   }, []);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("sp_floatingMatePosition");
+      if (stored) setFloatingMatePosition(JSON.parse(stored));
+    } catch {
+      // ignore stored layout failures
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sp_floatingMatePosition", JSON.stringify(floatingMatePosition));
+    } catch {
+      // ignore storage failures
+    }
+  }, [floatingMatePosition]);
 
   const getActiveMascotUrl = () => {
     const active = settings.activeMascot || "woolini";
     if (active === "custom") return settings.customMascotUrl || MASCOT_IMAGES.woolini;
     return MASCOT_IMAGES[active] || MASCOT_IMAGES.woolini;
+  };
+
+  const clampFloatingMate = (x: number, y: number) => ({
+    x: Math.min(92, Math.max(8, x)),
+    y: Math.min(88, Math.max(12, y)),
+  });
+
+  const updateFloatingMateFromPoint = (clientX: number, clientY: number) => {
+    const planner = plannerRef.current;
+    if (!planner) return;
+    const rect = planner.getBoundingClientRect();
+    const nextX = ((clientX - rect.left) / rect.width) * 100;
+    const nextY = ((clientY - rect.top) / rect.height) * 100;
+    setFloatingMatePosition(clampFloatingMate(nextX, nextY));
+  };
+
+  const handleFloatingMatePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    floatingMateDragRef.current = { dragging: true, moved: false };
+  };
+
+  const handleFloatingMatePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!floatingMateDragRef.current.dragging) return;
+    floatingMateDragRef.current.moved = true;
+    updateFloatingMateFromPoint(e.clientX, e.clientY);
+  };
+
+  const handleFloatingMatePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    const wasMoved = floatingMateDragRef.current.moved;
+    floatingMateDragRef.current = { dragging: false, moved: false };
+    if (!wasMoved) router.push("/character");
   };
 
   // Helper date parsing/formatting
@@ -471,50 +524,17 @@ export default function PlannerPage() {
     updateTaskTime(id, 0);
   };
 
-  // Mascot woolini floating interaction
-  const handlePetFloatingMascot = () => {
-    const active = settings.activeMascot || "woolini";
-    const speechLines = {
-      woolini: "우와, 절 만져주셔서 집중도가 오르는 기분이에요! 🐉",
-      "yang-i": "보송보송한 양양이 털을 쓸어주셔서 공부가 더 잘될 거예요! 🐑",
-      "gom-i": "진득하게 묵묵히 앉아서 오늘도 목표를 달성해봅시다! 🐻",
-      custom: "새로운 힘이 솟아납니다! 힘내서 마스터해요! ✨",
-    };
-    setSpeechBubble(speechLines[active] || speechLines.woolini);
-    setSpeechBubbleVisible(true);
-    addXP(20);
-
-    // Audio beep simulation
-    if (settings.soundEnabled) {
-      try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const notes = [523.25, 659.25, 783.99];
-        notes.forEach((freq, index) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + index * 0.12);
-          gain.gain.setValueAtTime(0.12, audioCtx.currentTime + index * 0.12);
-          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + index * 0.12 + 0.3);
-          osc.start(audioCtx.currentTime + index * 0.12);
-          osc.stop(audioCtx.currentTime + index * 0.12 + 0.4);
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    setTimeout(() => {
-      setSpeechBubbleVisible(false);
-    }, 3000);
-  };
-
   // Timetable grid functions
   const getTaskColorForCell = (hour: number, part: number) => {
     const dayTasks = tasks.filter((t) => t.date === currentPlannerDate);
     const cellMinutes = hour * 60 + part * 10;
+
+    const getDifficultyColor = (difficulty?: string, fallbackColor?: string) => {
+      if (difficulty === "easy") return settings.colorEasy || "#FFFACD";
+      if (difficulty === "medium") return settings.colorMedium || "#87CEFA";
+      if (difficulty === "hard") return settings.colorHard || "#FA8072";
+      return fallbackColor || "#85b8b1";
+    };
 
     for (const task of dayTasks) {
       if (!task.startTime) continue;
@@ -524,21 +544,22 @@ export default function PlannerPage() {
       const endTotalMinutes = startTotalMinutes + durationMinutes;
 
       if (cellMinutes >= startTotalMinutes && cellMinutes < endTotalMinutes) {
-        return task.color;
+        return getDifficultyColor(task.difficulty, task.color);
       }
 
       // Midnight wrap-around check (1440 minutes)
       if (endTotalMinutes > 1440) {
         const wrappedEnd = endTotalMinutes - 1440;
         if (cellMinutes < wrappedEnd) {
-          return task.color;
+          return getDifficultyColor(task.difficulty, task.color);
         }
       }
     }
     return null;
   };
 
-  const handleCellMouseDown = (hour: number, part: number) => {
+  const handleCellMouseDown = (e: React.MouseEvent, hour: number, part: number) => {
+    e.preventDefault();
     const key = `${currentPlannerDate}_${hour}_${part}`;
     const erasing = !!timetableDrawings[key];
     setIsErasing(erasing);
@@ -550,6 +571,37 @@ export default function PlannerPage() {
     if (isDrawing) {
       colorCell(hour, part, isErasing);
     }
+  };
+
+  const handleCellTouchStart = (e: React.TouchEvent, hour: number, part: number) => {
+    if (e.cancelable) e.preventDefault();
+    const key = `${currentPlannerDate}_${hour}_${part}`;
+    const erasing = !!timetableDrawings[key];
+    setIsErasing(erasing);
+    setIsDrawing(true);
+    colorCell(hour, part, erasing);
+  };
+
+  const handleCellTouchMove = (e: React.TouchEvent) => {
+    if (!isDrawing) return;
+    if (e.cancelable) e.preventDefault();
+    
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!element) return;
+    
+    const hourAttr = element.getAttribute("data-hour");
+    const partAttr = element.getAttribute("data-part");
+    
+    if (hourAttr !== null && partAttr !== null) {
+      const h = parseInt(hourAttr, 10);
+      const p = parseInt(partAttr, 10);
+      colorCell(h, p, isErasing);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDrawing(false);
   };
 
   const colorCell = (hour: number, part: number, erase: boolean) => {
@@ -566,7 +618,7 @@ export default function PlannerPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-3.5 space-y-3 relative overflow-hidden">
+    <div ref={plannerRef} className="flex-1 flex flex-col p-3.5 space-y-3 relative overflow-hidden">
       
       {/* Top Banner D-Day Alert */}
       {settings.deadlineAlertsEnabled && dueTodayTasks.length > 0 && (
@@ -698,7 +750,19 @@ export default function PlannerPage() {
                   <div
                     key={t.id}
                     className="p-3 rounded-2xl bg-surface-container-low dark:bg-surface-container border border-surface-variant/30 flex flex-col gap-2.5 transition-all bubbly-shadow relative"
-                    style={{ borderLeft: `5px solid ${t.dueDate === currentPlannerDate ? "#ef4444" : t.color}` }}
+                    style={{
+                      borderLeft: `5px solid ${
+                        t.dueDate === currentPlannerDate
+                          ? "#ef4444"
+                          : t.difficulty === "easy"
+                          ? settings.colorEasy || "#FFFACD"
+                          : t.difficulty === "medium"
+                          ? settings.colorMedium || "#87CEFA"
+                          : t.difficulty === "hard"
+                          ? settings.colorHard || "#FA8072"
+                          : t.color || "#85b8b1"
+                      }`
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 overflow-hidden w-full">
@@ -819,14 +883,21 @@ export default function PlannerPage() {
         {/* Right: 24h Timetable Grid */}
         <div className="col-span-7 flex flex-col bg-surface-container-lowest dark:bg-surface-container rounded-2xl p-2 border border-surface-variant/30 min-h-0 bubbly-shadow">
           <div className="flex items-center justify-between gap-0.5 mb-2 pb-1.5 border-b border-surface-variant/20 shrink-0">
-            <div className="flex items-center gap-1">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: taskColor }}
-              ></span>
-              <span className="text-[8px] font-bold text-on-surface-variant">
-                브러시
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-bold text-on-surface-variant select-none">
+                브러시:
               </span>
+              <div
+                className="w-3 h-3 rounded-full border border-neutral-300 dark:border-neutral-700 shrink-0"
+                style={{ backgroundColor: taskColor }}
+              />
+              <input
+                type="text"
+                value={taskColor}
+                onChange={(e) => setTaskColor(e.target.value)}
+                placeholder="#85b8b1"
+                className="w-16 bg-surface-container-low border border-outline-variant/60 rounded px-1.5 py-0.5 text-[8px] font-bold text-center focus:outline-none focus:border-primary text-on-surface uppercase"
+              />
             </div>
             <div className="flex items-center gap-1.5">
               <div className="flex items-center gap-0.5 bg-surface-container-high rounded-full px-1 py-0.5 scale-90">
@@ -857,7 +928,7 @@ export default function PlannerPage() {
           </div>
 
           <div
-            className="flex-1 overflow-y-auto pr-0.5 custom-scrollbar space-y-1 pb-16"
+            className="flex-1 overflow-y-auto pr-0.5 custom-scrollbar space-y-1 pb-16 select-none"
             id="timetable-scroller"
           >
             {Array.from({ length: 24 }).map((_, hour) => {
@@ -890,6 +961,13 @@ export default function PlannerPage() {
                     {isColorOn &&
                       allVisibleTasks.flatMap((task) => {
                         if (!task.startTime) return [];
+                        const getDifficultyColor = (difficulty?: string, fallbackColor?: string) => {
+                          if (difficulty === "easy") return settings.colorEasy || "#FFFACD";
+                          if (difficulty === "medium") return settings.colorMedium || "#87CEFA";
+                          if (difficulty === "hard") return settings.colorHard || "#FA8072";
+                          return fallbackColor || "#85b8b1";
+                        };
+
                         const [sh, sm] = task.startTime.split(":").map(Number);
                         const startTotalMinutes = sh * 60 + sm;
                         const durationMinutes = parseDurationMinutes(task.duration);
@@ -915,7 +993,7 @@ export default function PlannerPage() {
                               style={{
                                 left: `${leftPercent}%`,
                                 width: `${widthPercent}%`,
-                                backgroundColor: task.color,
+                                backgroundColor: getDifficultyColor(task.difficulty, task.color),
                                 opacity: 0.9,
                               }}
                             >
@@ -947,7 +1025,7 @@ export default function PlannerPage() {
                                 style={{
                                   left: `${leftPercent}%`,
                                   width: `${widthPercent}%`,
-                                  backgroundColor: task.color,
+                                  backgroundColor: getDifficultyColor(task.difficulty, task.color),
                                   opacity: 0.9,
                                 }}
                               >
@@ -977,8 +1055,13 @@ export default function PlannerPage() {
                       return (
                         <div
                           key={part}
-                          onMouseDown={() => handleCellMouseDown(hour, part)}
+                          onMouseDown={(e) => handleCellMouseDown(e, hour, part)}
                           onMouseEnter={() => handleCellMouseEnter(hour, part)}
+                          onTouchStart={(e) => handleCellTouchStart(e, hour, part)}
+                          onTouchMove={handleCellTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          data-hour={hour}
+                          data-part={part}
                           className={`bg-white dark:bg-neutral-900 hover:bg-primary-container/20 transition-colors cursor-pointer border-r border-neutral-100 dark:border-neutral-800/30 last:border-0 timetable-grid-cell ${
                             finalColor ? "timetable-cell-active" : ""
                           }`}
@@ -997,20 +1080,22 @@ export default function PlannerPage() {
       </div>
 
       {/* Floating Mate mascot */}
-      <div className="absolute bottom-4 right-4 z-30 select-none">
-        <div
-          className="relative cursor-pointer"
-          onClick={() => router.push("/character")}
+      <div
+        className="absolute z-30 select-none"
+        style={{
+          left: `${floatingMatePosition.x}%`,
+          top: `${floatingMatePosition.y}%`,
+          transform: "translate(-50%, -50%)",
+        }}
+      >
+        <button
+          type="button"
+          className="relative cursor-grab touch-none active:cursor-grabbing"
+          onPointerDown={handleFloatingMatePointerDown}
+          onPointerMove={handleFloatingMatePointerMove}
+          onPointerUp={handleFloatingMatePointerUp}
+          aria-label="울리니 이동"
         >
-          <div
-            className={`absolute bottom-full right-0 mb-2.5 bg-secondary text-white px-3 py-1.5 rounded-xl rounded-br-none text-[9px] font-bold transition-all duration-300 whitespace-nowrap shadow-md ${
-              speechBubbleVisible
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-1.5 pointer-events-none"
-            }`}
-          >
-            {speechBubble}
-          </div>
           <div
             className="w-12 h-12 rounded-full bg-white/40 dark:bg-black/40 backdrop-blur-md border border-white/50 p-1.5 bubbly-shadow flex items-center justify-center active:scale-90 transition-transform floating-mate"
             id="floating-mate-character"
@@ -1021,7 +1106,7 @@ export default function PlannerPage() {
               alt="Mascot character"
             />
           </div>
-        </div>
+        </button>
       </div>
 
       {/* ADD / EDIT SUBJECT MODAL DIALOG */}
@@ -1135,7 +1220,7 @@ export default function PlannerPage() {
                 <label className="block font-bold text-on-surface-variant mb-1.5">
                   과목 고유 색상
                 </label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   {[
                     "#85b8b1", // Muted Mint
                     "#cab7df", // Muted Lavender
@@ -1156,6 +1241,20 @@ export default function PlannerPage() {
                       style={{ backgroundColor: color }}
                     />
                   ))}
+                </div>
+                {/* HEX 코드 직접 입력 */}
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full border-2 border-white ring-1 ring-neutral-300/40 shrink-0"
+                    style={{ backgroundColor: taskColor }}
+                  />
+                  <input
+                    type="text"
+                    value={taskColor}
+                    onChange={(e) => setTaskColor(e.target.value)}
+                    placeholder="#85b8b1"
+                    className="flex-1 bg-surface-container-low border border-outline-variant/60 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none focus:border-primary text-on-surface uppercase tracking-wide"
+                  />
                 </div>
               </div>
 

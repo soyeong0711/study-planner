@@ -16,6 +16,8 @@ export interface Task {
   duration: string; // e.g. "2시간 30분"
   date: string; // YYYY-MM-DD
   dueDate?: string | null;
+  difficulty?: string;
+  expReward?: number;
 }
 
 export interface Concept {
@@ -34,6 +36,23 @@ export interface WrongAnswer {
   resolved: boolean;
 }
 
+export interface RoomFurniture {
+  id: string;
+  itemId: string;
+  x: number;
+  y: number;
+}
+
+export interface EquippedClothing {
+  head?: string;
+  face?: string;
+  neck?: string;
+  body?: string;
+  back?: string;
+  feet?: string;
+  hand?: string;
+}
+
 export interface AppSettings {
   username: string;
   goalHours: string;
@@ -46,6 +65,9 @@ export interface AppSettings {
   customMascotUrl: string;
   deadlineAlertsEnabled: boolean;
   geminiApiKey: string;
+  colorEasy: string;
+  colorMedium: string;
+  colorHard: string;
 }
 
 interface AppContextType {
@@ -70,6 +92,15 @@ interface AppContextType {
   mascotXP: number;
   setMascotXP: React.Dispatch<React.SetStateAction<number>>;
   addXP: (amount: number) => void;
+  spendXP: (amount: number) => boolean;
+  ownedFurniture: string[];
+  setOwnedFurniture: React.Dispatch<React.SetStateAction<string[]>>;
+  roomFurniture: RoomFurniture[];
+  setRoomFurniture: React.Dispatch<React.SetStateAction<RoomFurniture[]>>;
+  ownedClothing: string[];
+  setOwnedClothing: React.Dispatch<React.SetStateAction<string[]>>;
+  equippedClothing: EquippedClothing;
+  setEquippedClothing: React.Dispatch<React.SetStateAction<EquippedClothing>>;
   isLoggedIn: boolean;
   setIsLoggedIn: (loginState: boolean) => void;
   currentActiveTab: string;
@@ -107,6 +138,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     customMascotUrl: "",
     deadlineAlertsEnabled: true,
     geminiApiKey: "",
+    colorEasy: "#FFFACD",
+    colorMedium: "#87CEFA",
+    colorHard: "#FA8072",
   });
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -119,6 +153,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<Array<{ id: number; text: string; date: string; read: boolean }>>([]);
   const [mascotLevel, setMascotLevel] = useState(1);
   const [mascotXP, setMascotXP] = useState(0);
+  const [ownedFurniture, setOwnedFurniture] = useState<string[]>([]);
+  const [roomFurniture, setRoomFurniture] = useState<RoomFurniture[]>([]);
+  const [ownedClothing, setOwnedClothing] = useState<string[]>([]);
+  const [equippedClothing, setEquippedClothing] = useState<EquippedClothing>({});
 
   // Initialize dates
   useEffect(() => {
@@ -209,13 +247,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: t.id,
               title: t.title,
               description: t.description || "",
-              timeSeconds: (t.studyTime || 0) * 60,
+              timeSeconds: t.timeSeconds !== undefined ? t.timeSeconds : (t.studyTime || 0) * 60,
               color: t.color || "#a5d8d1",
-              completed: statusMap[t.status] || "none",
+              completed: t.completed || statusMap[t.status] || "none",
               startTime: startTimeStr,
               duration: t.duration || "0시간 0분",
-              date: dateStr,
+              date: t.date || dateStr,
               dueDate: t.dueDate ? t.dueDate.split("T")[0] : null,
+              difficulty: t.difficulty,
+              expReward: t.expReward,
             };
           });
           setTasks(mappedTasks);
@@ -248,13 +288,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetchAllData();
   }, [status, session]);
 
+  // Load local settings (colors, theme, etc.) from localStorage on mount — always, regardless of auth
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const storedSettings = localStorage.getItem("sp_settings");
+      if (storedSettings) {
+        const parsed = JSON.parse(storedSettings);
+        // Always apply locally stored UI/color preferences
+        setSettings((prev) => ({
+          ...prev,
+          themeColor: parsed.themeColor || prev.themeColor,
+          bgMode: parsed.bgMode || prev.bgMode,
+          cardRoundness: parsed.cardRoundness || prev.cardRoundness,
+          soundEnabled: parsed.soundEnabled !== undefined ? parsed.soundEnabled : prev.soundEnabled,
+          deadlineAlertsEnabled: parsed.deadlineAlertsEnabled !== undefined ? parsed.deadlineAlertsEnabled : prev.deadlineAlertsEnabled,
+          colorEasy: parsed.colorEasy || prev.colorEasy,
+          colorMedium: parsed.colorMedium || prev.colorMedium,
+          colorHard: parsed.colorHard || prev.colorHard,
+        }));
+      }
+    } catch (e) {
+      console.error("Failed to load local settings", e);
+    }
+  }, []);
+
   // Load from localStorage on mount (for non-authenticated mode fallback)
   useEffect(() => {
     if (typeof window === "undefined" || status === "authenticated") return;
 
     try {
       const storedSettings = localStorage.getItem("sp_settings");
-      if (storedSettings) setSettings(JSON.parse(storedSettings));
+      if (storedSettings) {
+        const parsed = JSON.parse(storedSettings);
+        // Exclude username and avatarUrl — these must always come from server when authenticated
+        const { username: _u, avatarUrl: _a, ...localOnlySettings } = parsed;
+        setSettings((prev) => ({ ...prev, ...localOnlySettings }));
+      }
 
       const storedTasks = localStorage.getItem("sp_tasks");
       if (storedTasks) setTasks(JSON.parse(storedTasks));
@@ -283,6 +354,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const storedNotifications = localStorage.getItem("sp_notifications");
       if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
 
+      const storedOwnedFurniture = localStorage.getItem("sp_ownedFurniture");
+      if (storedOwnedFurniture) setOwnedFurniture(JSON.parse(storedOwnedFurniture));
+
+      const storedRoomFurniture = localStorage.getItem("sp_roomFurniture");
+      if (storedRoomFurniture) setRoomFurniture(JSON.parse(storedRoomFurniture));
+
+      const storedOwnedClothing = localStorage.getItem("sp_ownedClothing");
+      if (storedOwnedClothing) setOwnedClothing(JSON.parse(storedOwnedClothing));
+
+      const storedEquippedClothing = localStorage.getItem("sp_equippedClothing");
+      if (storedEquippedClothing) setEquippedClothing(JSON.parse(storedEquippedClothing));
+
       const loginState = localStorage.getItem("sp_logged_in");
       if (loginState === "true") setIsLoggedIn(true);
     } catch (e) {
@@ -290,11 +373,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [status]);
 
-  // Save data to localStorage on changes (fallback)
+  // Save settings to localStorage on changes — always (auth or not) so color/theme preferences persist
   useEffect(() => {
-    if (typeof window === "undefined" || !currentPlannerDate) return;
+    if (typeof window === "undefined") return;
     localStorage.setItem("sp_settings", JSON.stringify(settings));
-  }, [settings, currentPlannerDate]);
+  }, [settings]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !currentPlannerDate || status === "authenticated") return;
@@ -340,6 +423,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window === "undefined" || !currentPlannerDate) return;
     localStorage.setItem("sp_notifications", JSON.stringify(notifications));
   }, [notifications, currentPlannerDate]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("sp_ownedFurniture", JSON.stringify(ownedFurniture));
+  }, [ownedFurniture]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("sp_roomFurniture", JSON.stringify(roomFurniture));
+  }, [roomFurniture]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("sp_ownedClothing", JSON.stringify(ownedClothing));
+  }, [ownedClothing]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("sp_equippedClothing", JSON.stringify(equippedClothing));
+  }, [equippedClothing]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -438,6 +541,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const spendXP = (amount: number) => {
+    if (mascotXP < amount) return false;
+    const nextXP = mascotXP - amount;
+    setMascotXP(nextXP);
+
+    if (isLoggedIn) {
+      fetch("/api/character", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exp: nextXP }),
+      }).catch(console.error);
+    }
+
+    return true;
+  };
+
   // Real Database Syncing Helper Methods
   const createTask = async (
     title: string,
@@ -475,12 +594,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const res = await fetch("/api/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, scheduledAt }),
+          body: JSON.stringify({
+            title,
+            description,
+            startTime,
+            duration,
+            dueDate,
+            color,
+            date: targetDate,
+            scheduledAt,
+          }),
         });
         const savedTask = await res.json();
         if (res.ok && savedTask.id) {
           setTasks((prev) =>
-            prev.map((t) => (t.id === tempId ? { ...t, id: savedTask.id } : t))
+            prev.map((t) =>
+              t.id === tempId
+                ? {
+                    ...t,
+                    id: savedTask.id,
+                    difficulty: savedTask.difficulty,
+                    expReward: savedTask.expReward,
+                  }
+                : t
+            )
           );
         }
       } catch (e) {
@@ -515,6 +652,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: updates.title,
+            description: updates.description,
+            startTime: updates.startTime,
+            duration: updates.duration,
+            dueDate: updates.dueDate,
+            color: updates.color,
             scheduledAt,
           }),
         });
@@ -551,7 +693,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const nextStatus = t.completed === status ? "none" : status;
           finalNextStatus = nextStatus;
           if (nextStatus === "o") {
-            xpAwarded = 50;
+            xpAwarded = t.expReward || 30;
           }
           return { ...t, completed: nextStatus };
         }
@@ -671,6 +813,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateSettings({
       activeMascot: mascotKey,
       customMascotUrl: mascotKey === "custom" ? imageUrl : "",
+      avatarUrl: imageUrl,
     });
 
     if (isLoggedIn) {
@@ -678,7 +821,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await fetch("/api/character", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, imageUrl: mascotKey === "custom" ? imageUrl : "" }),
+          body: JSON.stringify({ name, imageUrl }),
         });
       } catch (e) {
         console.error("Failed to update character details in DB", e);
@@ -744,6 +887,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mascotXP,
         setMascotXP,
         addXP,
+        spendXP,
+        ownedFurniture,
+        setOwnedFurniture,
+        roomFurniture,
+        setRoomFurniture,
+        ownedClothing,
+        setOwnedClothing,
+        equippedClothing,
+        setEquippedClothing,
         isLoggedIn,
         setIsLoggedIn,
         currentActiveTab,
