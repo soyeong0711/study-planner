@@ -7,14 +7,8 @@ import PhoneShell from "@/components/layout/PhoneShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Woolini - 스터디 플래너",
+  title: "Woolini - 안드로이드 플래너",
   description: "나만의 모바일 스터디 플래너",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Woolini",
-  },
 };
 
 export default function RootLayout({
@@ -27,7 +21,6 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-        <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body>
         <Providers>

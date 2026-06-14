@@ -255,69 +255,6 @@ export default function NavDrawer({
                   <div className="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
-
-              {/* Difficulty Colors Configuration */}
-              <div className="border-t border-surface-variant/10 pt-2.5 space-y-2">
-                <span className="block font-bold text-on-surface-variant text-[9px] uppercase tracking-wide">
-                  난이도별 색상 (HEX 코드 입력)
-                </span>
-                <div className="space-y-2 pl-0.5">
-                  {/* 쉬움 */}
-                  <div className="space-y-0.5">
-                    <span className="text-[8px] font-bold text-on-surface-variant/60 uppercase">쉬움 (Easy)</span>
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className="w-4 h-4 rounded-full border border-neutral-300/40 shrink-0"
-                        style={{ backgroundColor: settings.colorEasy || "#FFFACD" }}
-                      />
-                      <input
-                        type="text"
-                        value={settings.colorEasy || "#FFFACD"}
-                        onChange={(e) => updateSettings({ colorEasy: e.target.value })}
-                        placeholder="#FFFACD"
-                        className="flex-1 bg-surface-container-low border border-outline-variant/60 rounded-lg px-2 py-1 text-[9px] font-bold focus:outline-none focus:border-primary text-on-surface uppercase tracking-wide"
-                      />
-                    </div>
-                  </div>
-                  {/* 보통 */}
-                  <div className="space-y-0.5">
-                    <span className="text-[8px] font-bold text-on-surface-variant/60 uppercase">보통 (Medium)</span>
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className="w-4 h-4 rounded-full border border-neutral-300/40 shrink-0"
-                        style={{ backgroundColor: settings.colorMedium || "#87CEFA" }}
-                      />
-                      <input
-                        type="text"
-                        value={settings.colorMedium || "#87CEFA"}
-                        onChange={(e) => updateSettings({ colorMedium: e.target.value })}
-                        placeholder="#87CEFA"
-                        className="flex-1 bg-surface-container-low border border-outline-variant/60 rounded-lg px-2 py-1 text-[9px] font-bold focus:outline-none focus:border-primary text-on-surface uppercase tracking-wide"
-                      />
-                    </div>
-                  </div>
-                  {/* 어려움 */}
-                  <div className="space-y-0.5">
-                    <span className="text-[8px] font-bold text-on-surface-variant/60 uppercase">어려움 (Hard)</span>
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className="w-4 h-4 rounded-full border border-neutral-300/40 shrink-0"
-                        style={{ backgroundColor: settings.colorHard || "#FA8072" }}
-                      />
-                      <input
-                        type="text"
-                        value={settings.colorHard || "#FA8072"}
-                        onChange={(e) => updateSettings({ colorHard: e.target.value })}
-                        placeholder="#FA8072"
-                        className="flex-1 bg-surface-container-low border border-outline-variant/60 rounded-lg px-2 py-1 text-[9px] font-bold focus:outline-none focus:border-primary text-on-surface uppercase tracking-wide"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <p className="text-[8px] text-on-surface-variant/50 leading-tight">
-                  HEX 코드를 직접 입력하세요. 예: #FF6B6B
-                </p>
-              </div>
             </div>
           )}
 

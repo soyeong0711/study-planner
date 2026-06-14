@@ -3,22 +3,39 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import KakaoProvider from "next-auth/providers/kakao";
 import NaverProvider from "next-auth/providers/naver";
-import { findUserByEmail, createUser } from "./pinecone";
+import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 
-const providers = [
-  GoogleProvider({
-    clientId: process.env.GOOGLE_CLIENT_ID || "google-placeholder-id",
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || "google-placeholder-secret",
-  }),
-  KakaoProvider({
-    clientId: process.env.KAKAO_CLIENT_ID || "kakao-placeholder-id",
-    clientSecret: process.env.KAKAO_CLIENT_SECRET || "kakao-placeholder-secret",
-  }),
-  NaverProvider({
-    clientId: process.env.NAVER_CLIENT_ID || "naver-placeholder-id",
-    clientSecret: process.env.NAVER_CLIENT_SECRET || "naver-placeholder-secret",
-  }),
+const providers = [];
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  );
+}
+
+if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
+  providers.push(
+    KakaoProvider({
+      clientId: process.env.KAKAO_CLIENT_ID,
+      clientSecret: process.env.KAKAO_CLIENT_SECRET,
+    })
+  );
+}
+
+if (process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET) {
+  providers.push(
+    NaverProvider({
+      clientId: process.env.NAVER_CLIENT_ID,
+      clientSecret: process.env.NAVER_CLIENT_SECRET,
+    })
+  );
+}
+
+providers.push(
   CredentialsProvider({
     name: "Credentials",
     credentials: {
@@ -30,13 +47,16 @@ const providers = [
         throw new Error("이메일과 비밀번호를 입력해주세요.");
       }
 
-      const user = await findUserByEmail(credentials.email);
+      const user = await prisma.user.findUnique({
+        where: { email: credentials.email },
+        include: { character: true },
+      });
 
-      if (!user || !user.hashedPassword) {
+      if (!user || !user.password) {
         throw new Error("가입되지 않은 이메일이거나 비밀번호가 다릅니다.");
       }
 
-      const isValid = await bcrypt.compare(credentials.password, user.hashedPassword);
+      const isValid = await bcrypt.compare(credentials.password, user.password);
       if (!isValid) {
         throw new Error("비밀번호가 일치하지 않습니다.");
       }
@@ -49,7 +69,7 @@ const providers = [
       };
     },
   })
-];
+);
 
 export const authOptions: AuthOptions = {
   providers,
@@ -57,40 +77,42 @@ export const authOptions: AuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider !== "credentials" && user.email) {
         // Find or create user for Social Logins
-        const dbUser = await findUserByEmail(user.email);
+        let dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          include: { character: true },
+        });
 
         if (!dbUser) {
-          await createUser({
-            email: user.email,
-            name: user.name || "학습자",
-            image: user.image || "",
+          dbUser = await prisma.user.create({
+            data: {
+              email: user.email,
+              name: user.name || "학습자",
+              image: user.image,
+            },
+            include: { character: true },
+          });
+        }
+
+        if (!dbUser.character) {
+          await prisma.character.create({
+            data: {
+              userId: dbUser.id,
+              name: "올리니", // default character
+            },
           });
         }
       }
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
-        token.email = user.email;
-        if (account && account.provider !== "credentials" && user.email) {
-          const dbUser = await findUserByEmail(user.email);
-          token.id = dbUser ? dbUser.id : user.id;
-        } else {
-          token.id = user.id;
-        }
+        token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id as string;
-        if (token.email) {
-          const dbUser = await findUserByEmail(token.email);
-          if (dbUser) {
-            session.user.name = dbUser.characterName || dbUser.name || session.user.name;
-            session.user.image = dbUser.characterImage || dbUser.image || session.user.image;
-          }
-        }
       }
       return session;
     },
@@ -101,5 +123,5 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: "/",
   },
-  secret: process.env.NEXTAUTH_SECRET || "woolini-dev-secret-2026",
+  secret: process.env.NEXTAUTH_SECRET,
 };

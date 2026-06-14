@@ -1,28 +1,34 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { findUserByEmail, updateUser } from "@/lib/pinecone";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !session.user.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
   }
 
+  const userId = (session.user as any).id;
+
   try {
-    const user = await findUserByEmail(session.user.email);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        goalTime: true,
+        createdAt: true,
+      },
+    });
+
     if (!user) {
       return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
     }
 
-    return NextResponse.json({
-      id: user.id,
-      name: user.name || user.characterName || "학습자",
-      email: user.email,
-      image: user.characterImage || user.image || "",
-      goalTime: user.goalTime !== undefined ? Number(user.goalTime) : 120,
-      createdAt: user.createdAt,
-    });
+    return NextResponse.json(user);
   } catch (error) {
     return NextResponse.json({ error: "사용자 정보 조회에 실패했습니다." }, { status: 500 });
   }
@@ -30,32 +36,27 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !session.user.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
   }
 
+  const userId = (session.user as any).id;
+
   try {
     const { name, goalTime, image } = await req.json();
-    const user = await findUserByEmail(session.user.email);
-    if (!user) {
-      return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
-    }
 
-    const updated = await updateUser(user.id, {
-      name,
-      goalTime: goalTime !== undefined ? Number(goalTime) : undefined,
-      image,
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(goalTime !== undefined && { goalTime: Number(goalTime) }),
+        ...(image !== undefined && { image }),
+      },
+      select: { id: true, name: true, email: true, image: true, goalTime: true },
     });
 
-    return NextResponse.json({
-      id: updated.id,
-      name: updated.name,
-      email: updated.email,
-      image: updated.image,
-      goalTime: updated.goalTime !== undefined ? Number(updated.goalTime) : 120,
-    });
+    return NextResponse.json(updated);
   } catch (error) {
-    console.error("Profile update error:", error);
     return NextResponse.json({ error: "사용자 정보 수정에 실패했습니다." }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -8,8 +9,17 @@ export async function GET() {
     return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
   }
 
-  // 로컬 DB 전향으로 백엔드는 빈 배열 응답
-  return NextResponse.json([]);
+  const userId = (session.user as any).id;
+
+  try {
+    const subjects = await prisma.subject.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    });
+    return NextResponse.json(subjects);
+  } catch (error) {
+    return NextResponse.json({ error: "과목을 조회하는 데 실패했습니다." }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -26,14 +36,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "과목명을 입력해주세요." }, { status: 400 });
     }
 
-    // DB에 저장하지 않고 임시 모의 과목 데이터 반환
-    const subject = {
-      id: `subj_${Date.now()}`,
-      userId,
-      name,
-      color: color || "#8b5cf6",
-      createdAt: new Date().toISOString(),
-    };
+    const subject = await prisma.subject.create({
+      data: {
+        userId,
+        name,
+        color: color || "#8b5cf6",
+      },
+    });
 
     return NextResponse.json(subject);
   } catch (error) {

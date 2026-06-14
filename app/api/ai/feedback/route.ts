@@ -1,44 +1,69 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { findUserByEmail, upsertStudyRecord } from "@/lib/pinecone";
+import { prisma } from "@/lib/prisma";
 import { generateAIStudyFeedback } from "@/lib/gemini";
+import { upsertStudyRecord } from "@/lib/pinecone";
 
-export async function POST(req: Request) {
+export async function POST() {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !session.user.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
   }
 
   const userId = (session.user as any).id;
 
   try {
-    // 클라이언트 로컬 DB에서 집계된 통계를 요청 본문(JSON)으로 전달받음
-    const body = await req.json().catch(() => ({}));
-    const totalStudyTime = body.totalStudyTime !== undefined ? Number(body.totalStudyTime) : 0;
-    const completedCount = body.completedCount !== undefined ? Number(body.completedCount) : 0;
-    const partialCount = body.partialCount !== undefined ? Number(body.partialCount) : 0;
-    const failedCount = body.failedCount !== undefined ? Number(body.failedCount) : 0;
-    const subjectRatios = body.subjectRatios || "기록 없음";
+    // 1. Gather stats from character
+    const character = await prisma.character.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: { geminiApiKey: true }
+        }
+      }
+    });
 
-    // Pinecone에서 사용자 정보 조회하여 Gemini API Key 확인
-    const user = await findUserByEmail(session.user.email);
+    if (!character) {
+      return NextResponse.json({ error: "캐릭터 정보를 찾을 수 없습니다." }, { status: 404 });
+    }
 
-    // Call Gemini to generate feedback
+    // 2. Calculate subject ratios
+    const tasksWithSubjects = await prisma.task.findMany({
+      where: { userId },
+      include: { subject: true },
+    });
+
+    const subjectCounts: Record<string, number> = {};
+    tasksWithSubjects.forEach((task: any) => {
+      if (task.subject) {
+        subjectCounts[task.subject.name] = (subjectCounts[task.subject.name] || 0) + 1;
+      } else {
+        subjectCounts["기타"] = (subjectCounts["기타"] || 0) + 1;
+      }
+    });
+
+    const totalTasks = tasksWithSubjects.length;
+    const subjectRatios = totalTasks > 0
+      ? Object.entries(subjectCounts)
+          .map(([name, count]) => `${name}: ${Math.round((count / totalTasks) * 100)}%`)
+          .join(", ")
+      : "기록 없음";
+
+    // 3. Call Gemini to generate feedback
     const feedback = await generateAIStudyFeedback({
-      totalStudyTime,
-      completedCount,
-      partialCount,
-      failedCount,
+      totalStudyTime: character.totalStudyTime,
+      completedCount: character.completedTasks,
+      partialCount: character.partialTasks,
+      failedCount: character.failedTasks,
       subjectRatios,
-    }, user?.geminiApiKey);
+    }, (character as any).user?.geminiApiKey);
 
-    // Save feedback action in Pinecone for personalization context
-    const totalTasks = completedCount + partialCount + failedCount;
+    // 4. Save feedback action in Pinecone for personalization context
     await upsertStudyRecord(userId, `feedback_${Date.now()}`, `AI 학습 분석 피드백 받음: ${feedback}`, {
       type: "ai_feedback_generated",
-      totalStudyTime,
-      completionRate: totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0,
+      totalStudyTime: character.totalStudyTime,
+      completionRate: totalTasks > 0 ? (character.completedTasks / totalTasks) * 100 : 0,
     });
 
     return NextResponse.json({ feedback });

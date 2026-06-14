@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { findUserByEmail, updateUser } from "@/lib/pinecone";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !session.user.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
   }
 
+  const userId = (session.user as any).id;
+
   try {
-    const user = await findUserByEmail(session.user.email);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { geminiApiKey: true },
+    });
+
     return NextResponse.json({ geminiApiKey: user?.geminiApiKey || "" });
   } catch (error) {
     return NextResponse.json({ error: "API 키를 가져오는 데 실패했습니다." }, { status: 500 });
@@ -19,22 +25,22 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !session.user.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
   }
+
+  const userId = (session.user as any).id;
 
   try {
     const { geminiApiKey } = await req.json();
     
-    // Trim and clean the API key, convert empty string to ""
-    const cleanedKey = geminiApiKey?.trim() || "";
+    // Trim and clean the API key, convert empty string to null
+    const cleanedKey = geminiApiKey?.trim() || null;
 
-    const user = await findUserByEmail(session.user.email);
-    if (!user) {
-      return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
-    }
-
-    await updateUser(user.id, { geminiApiKey: cleanedKey });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { geminiApiKey: cleanedKey },
+    });
 
     return NextResponse.json({ success: true, message: "Gemini API 키가 저장되었습니다." });
   } catch (error) {

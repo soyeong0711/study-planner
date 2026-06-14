@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generateAutoStudyPlan } from "@/lib/gemini";
-import { findUserByEmail } from "@/lib/pinecone";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !session.user.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: "인증되지 않은 사용자입니다." }, { status: 401 });
   }
+
+  const userId = (session.user as any).id;
 
   try {
     const { daysLeft, dailyTime, subjects } = await req.json();
@@ -16,7 +18,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "모든 항목을 입력해주세요." }, { status: 400 });
     }
 
-    const user = await findUserByEmail(session.user.email);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { geminiApiKey: true },
+    });
 
     const plan = await generateAutoStudyPlan({
       daysLeft: Number(daysLeft),
